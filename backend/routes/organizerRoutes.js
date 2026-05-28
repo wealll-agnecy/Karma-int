@@ -22,7 +22,8 @@ router.get('/bookings', authorize('organizer', 'staff'), async (req, res) => {
     try {
         const Ticket = require('../models/Ticket');
         
-        const allEvents = await Event.find().select('_id').lean();
+        const organizerId = req.user.id || req.user._id;
+        const allEvents = await Event.find({ organizer: organizerId }).select('_id').lean();
         const eventIds = allEvents.map(e => e._id);
         
         const tickets = await Ticket.find({ eventId: { $in: eventIds } })

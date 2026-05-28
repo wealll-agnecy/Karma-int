@@ -14,7 +14,7 @@ const sendWhatsApp = async (options) => {
         };
 
         if (options.mediaUrl) {
-            messageOptions.mediaUrl = Array.isArray(options.mediaUrl) ? options.mediaUrl : [options.mediaUrl];
+            messageOptions.mediaUrl = [options.mediaUrl];
         }
 
         const message = await client.messages.create(messageOptions);

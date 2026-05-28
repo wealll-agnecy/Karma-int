@@ -83,7 +83,7 @@ export default function KarmaBookingPage() {
     }, []);
 
     const handleAddMember = () => {
-        setMembers([...members, { name: '', whatsappNumber: '' }]);
+        setMembers([...members, { name: '', whatsappNumber: '', email: '' }]);
     };
 
     const handleMemberChange = (index, field, value) => {
@@ -119,6 +119,7 @@ export default function KarmaBookingPage() {
         for (let i = 0; i < members.length; i++) {
             if (!members[i].name.trim()) return toast.error(`Enter Name for Member ${i + 1}`);
             if (!members[i].whatsappNumber.trim()) return toast.error(`Enter WhatsApp for Member ${i + 1}`);
+            if (!members[i].email?.trim()) return toast.error(`Enter Email for Member ${i + 1}`);
         }
 
         setProcessing(true);
@@ -128,7 +129,7 @@ export default function KarmaBookingPage() {
                 ...members.map((m) => ({
                     name: m.name,
                     phone: m.whatsappNumber,
-                    email: `${m.whatsappNumber.replace(/\s/g, '')}@karma.guest`,
+                    email: m.email,
                 })),
             ];
 
@@ -328,7 +329,7 @@ export default function KarmaBookingPage() {
                                         </button>
                                     </div>
                                     <div className="row g-3">
-                                        <div className="col-md-6">
+                                        <div className="col-md-4">
                                             <label className="kb-label">Member Name *</label>
                                             <input
                                                 className="kb-input"
@@ -338,7 +339,7 @@ export default function KarmaBookingPage() {
                                                 onChange={e => handleMemberChange(index, 'name', e.target.value)}
                                             />
                                         </div>
-                                        <div className="col-md-6">
+                                        <div className="col-md-4">
                                             <label className="kb-label">WhatsApp Number *</label>
                                             <input
                                                 className="kb-input"
@@ -346,6 +347,16 @@ export default function KarmaBookingPage() {
                                                 placeholder="10-digit number"
                                                 value={member.whatsappNumber}
                                                 onChange={e => handleMemberChange(index, 'whatsappNumber', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="col-md-4">
+                                            <label className="kb-label">Email Address *</label>
+                                            <input
+                                                className="kb-input"
+                                                type="email"
+                                                placeholder="Email for ticket"
+                                                value={member.email || ''}
+                                                onChange={e => handleMemberChange(index, 'email', e.target.value)}
                                             />
                                         </div>
                                     </div>
