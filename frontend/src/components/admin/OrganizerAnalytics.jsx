@@ -227,7 +227,7 @@ const OrganizerAnalytics = ({ eventId, organizerId, totalCapacity = 0 }) => {
                 <Col lg={6}>
                     <Card className="card-ui p-4 h-100">
                         <h6 className="fw-bold mb-4">Sales Visualization</h6>
-                        <ResponsiveContainer width="100%" height={180}>
+                        <ResponsiveContainer width="100%" height={180} minWidth={0} minHeight={0}>
                             <BarChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />

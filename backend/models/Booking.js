@@ -82,8 +82,23 @@ const BookingSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    // --- LEAD MANAGEMENT FIELDS ---
+    leadStatus: {
+        type: String,
+        enum: ['new', 'contacted', 'follow_up', 'converted', 'lost', 'calling', 'interested', 'not_interested', 'not_contacted'],
+        default: 'new'
+    },
+    followupDate: {
+        type: Date
+    },
+    leadNotes: [{
+        note: String,
+        statusAtTime: String,
+        date: { type: Date, default: Date.now }
+    }]
 });
+
 
 // Optimization Indexes
 // Virtual for remaining amount

@@ -167,6 +167,14 @@ const TicketSchema = new mongoose.Schema({
         type: Map,
         of: Boolean,
         default: {}
+    },
+
+    // MULTI-DAY TRACKING
+    // date (YYYY-MM-DD) -> { entry: boolean, food: boolean, parking: boolean, addons: { addonName: boolean } }
+    dailyScans: {
+        type: Map,
+        of: mongoose.Schema.Types.Mixed,
+        default: {}
     }
 });
 

@@ -1,23 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Badge, Modal, Spinner, Table } from 'react-bootstrap';
 import { 
-    FaUserPlus, FaTrash, FaLink, FaIdBadge, FaCheck, FaSearch, FaUsers, FaTimes 
+    FaUserPlus, FaTrash, FaLink, FaIdBadge, FaCheck, FaSearch, FaUsers, FaTimes, FaEdit
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import * as organizerApi from '../api/organizerApi';
 import * as eventApi from '../api/eventApi';
+import apiClient from '../api/apiClient';
 import { playSound } from '../utils/soundManager';
 import '../css/admin-pages.css';
 
 const OrganizerStaffManagement = () => {
     const [staffList, setStaffList] = useState([]);
+    const [addons, setAddons] = useState([]);
 
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
 
     const [selectedStaff, setSelectedStaff] = useState(null);
     const [search, setSearch] = useState('');
+
+    const [showReassignModal, setShowReassignModal] = useState(false);
+    const [staffToReassign, setStaffToReassign] = useState(null);
+    const [newRole, setNewRole] = useState('');
 
     // Form states
     const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff' });
@@ -28,6 +34,9 @@ const OrganizerStaffManagement = () => {
             setLoading(true);
             const staffRes = await organizerApi.getStaff();
             setStaffList(staffRes.data?.data || []);
+            
+            const addonRes = await apiClient.get('/api/v1/organizer/addons');
+            setAddons(addonRes.data?.data || []);
         } catch (err) {
             console.error('Failed to fetch data', err);
         } finally {
@@ -63,6 +72,18 @@ const OrganizerStaffManagement = () => {
             } catch (err) {
                 toast.error('Termination failure');
             }
+        }
+    };
+
+    const handleReassignSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await apiClient.put(`/api/v1/organizer/staff/${staffToReassign._id}/role`, { staffRole: newRole });
+            toast.success('Staff role reassigned successfully');
+            setShowReassignModal(false);
+            fetchData();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Reassignment failed');
         }
     };
 
@@ -119,6 +140,7 @@ const OrganizerStaffManagement = () => {
                                 <thead>
                                     <tr>
                                         <th>Identity Name</th>
+                                        <th>Staff ID</th>
                                         <th>Operational Role</th>
                                         <th className="text-end">Actions</th>
                                     </tr>
@@ -131,14 +153,23 @@ const OrganizerStaffManagement = () => {
                                                 <div className="small text-muted">{staff.email}</div>
                                             </td>
                                             <td>
+                                                <span className="fw-bold tracking-widest text-pink">{staff.staffId || 'PENDING'}</span>
+                                            </td>
+                                            <td>
                                                 <span className={`admin-badge badge-${
                                                     staff.staffRole === 'coordinator' ? 'approved' : 'resolved'
                                                 }`}>
-                                                    {staff.staffRole}
+                                                    {staff.staffCheckRole === 'CUSTOM_ADDON' && staff.customAddonItemNames?.length > 0
+                                                        ? staff.customAddonItemNames[0].toUpperCase()
+                                                        : staff.staffRole.toUpperCase()
+                                                    }
                                                 </span>
                                             </td>
                                             <td>
-                                                <div className="action-btn-group justify-content-end">
+                                                <div className="action-btn-group justify-content-end gap-2 d-flex">
+                                                    <button className="btn btn-outline-primary" title="Reassign Role" onClick={() => { setStaffToReassign(staff); setNewRole(staff.staffRole); setShowReassignModal(true); }}>
+                                                        <FaEdit size={12} />
+                                                    </button>
                                                     <button className="btn btn-pink" title="Terminate" onClick={() => handleDelete(staff._id)}>
                                                         <FaTrash size={12} />
                                                     </button>
@@ -204,11 +235,49 @@ const OrganizerStaffManagement = () => {
                                         <option value="gate staff">Gate Staff (Scanning & Validation)</option>
                                         <option value="coordinator">Coordinator (Operations)</option>
                                         <option value="support">Support Personnel</option>
+                                        {addons.map((addon, index) => (
+                                            <option key={index} value={addon.name}>{addon.name} ({addon.type})</option>
+                                        ))}
                                     </Form.Select>
                                 </Form.Group>
                             </div>
                             
                             <Button type="submit" className="btn btn-pink w-100 rounded-pill py-3 fw-black shadow-glow">DEPLOY PERSONNEL RECORD</Button>
+                        </Form>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Reassign Role Modal */}
+            <Modal show={showReassignModal} onHide={() => setShowReassignModal(false)} centered size="md" className="premium-popup">
+                <div className="popup-body">
+                    <button className="close-btn" onClick={() => setShowReassignModal(false)} style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
+                        <FaTimes size={16} />
+                    </button>
+                    <div className="popup-content">
+                        <div className="d-flex align-items-center gap-3 mb-4">
+                            <div className="modal-icon-header">
+                                <FaEdit />
+                            </div>
+                            <div>
+                                <h4 className="fw-black m-0">Reassign Role</h4>
+                                <p className="m-0 tiny-text uppercase tracking-widest text-pink fw-bold">{staffToReassign?.name}</p>
+                            </div>
+                        </div>
+                        <Form onSubmit={handleReassignSubmit}>
+                            <Form.Group className="mb-4">
+                                <Form.Label className="small uppercase fw-bold text-muted tracking-widest" style={{ fontSize: '10px' }}>New Operational Designation</Form.Label>
+                                <Form.Select className="rounded-12 border-light py-2" value={newRole} onChange={e => setNewRole(e.target.value)} required>
+                                    <option value="">Select a role...</option>
+                                    <option value="gate staff">Gate Staff (Scanning & Validation)</option>
+                                    <option value="coordinator">Coordinator (Operations)</option>
+                                    <option value="support">Support Personnel</option>
+                                    {addons.map((addon, index) => (
+                                        <option key={index} value={addon.name}>{addon.name} ({addon.type})</option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+                            <Button type="submit" className="btn btn-pink w-100 rounded-pill py-3 fw-black shadow-glow">UPDATE DESIGNATION</Button>
                         </Form>
                     </div>
                 </div>

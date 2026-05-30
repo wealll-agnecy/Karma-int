@@ -7,9 +7,11 @@ import {
     FaChevronLeft, FaChevronRight, FaShieldAlt, FaTicketAlt,
     FaUserTie, FaSignOutAlt, FaLifeRing, FaCalendarAlt, FaQrcode, FaBars, FaEnvelope, FaUserPlus, FaWallet
 } from 'react-icons/fa';
-import axios from 'axios';
+import apiClient from '../../api/apiClient';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import OrganizerNavbar from './OrganizerNavbar';
+import FloatingChatbot from './FloatingChatbot';
 import './DashboardLayout.css';
 
 const DashboardLayout = ({ children, role }) => {
@@ -17,6 +19,7 @@ const DashboardLayout = ({ children, role }) => {
     const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
     const [enquiryCount, setEnquiryCount] = useState(0);
+    const [notifCount, setNotifCount] = useState(0);
     const location = useLocation();
     const navigate = useNavigate();
     const { logout, user } = useAuth();
@@ -24,11 +27,18 @@ const DashboardLayout = ({ children, role }) => {
     const fetchCounts = async () => {
         if (role === 'admin' && user) {
             try {
-                const res = await axios.get('/api/v1/notifications/count');
-                console.log('[NOTIF] Notification Counts:', res.data);
+                const res = await apiClient.get('/api/v1/notifications/count');
                 setEnquiryCount(res.data.enquiries || 0);
             } catch (err) {
-                console.error('Failed to fetch notification counts', err);
+                console.error('Failed to fetch admin notification counts', err);
+            }
+        } else if (role === 'organizer' && user) {
+            try {
+                const res = await apiClient.get('/api/v1/notifications');
+                const unread = res.data.data?.filter(n => !n.isRead).length || 0;
+                setNotifCount(unread);
+            } catch (err) {
+                console.error('Failed to fetch organizer notifications', err);
             }
         }
     };
@@ -43,7 +53,7 @@ const DashboardLayout = ({ children, role }) => {
             document.body.classList.remove('dashboard-active');
             clearInterval(interval);
         };
-    }, [role]);
+    }, [role, user]);
 
     const handleLogout = async () => {
         await logout();
@@ -56,14 +66,15 @@ const DashboardLayout = ({ children, role }) => {
         { name: 'Organizers', path: '/admin/bookings', icon: <FaUserTie /> },
         { name: 'Enquiries', path: '/admin/enquiries', icon: <FaEnvelope />, badge: enquiryCount },
         { name: 'Staff Hub', path: '/admin/staff', icon: <FaUsers /> },
-        { name: 'Finance', path: '/admin/finance', icon: <FaWallet /> },
     ];
 
     const organizerLinks = [
-        { name: 'Dashboard', path: '/organizer/dashboard', icon: <FaThLarge /> },
+        { name: 'Dashboard', path: '/organizer/dashboard', icon: <FaThLarge />, badge: notifCount },
         { name: 'My Events', path: '/organizer/events', icon: <FaCalendarAlt /> },
         { name: 'Bookings', path: '/organizer/bookings', icon: <FaTicketAlt /> },
+        { name: 'Leads', path: '/organizer/leads', icon: <FaUserPlus /> },
         { name: 'Staff Hub', path: '/organizer/staff', icon: <FaUsers /> },
+        { name: 'Add-ons', path: '/organizer/addons', icon: <FaPlusCircle /> },
     ];
 
     const attendeeLinks = [
@@ -233,14 +244,20 @@ const DashboardLayout = ({ children, role }) => {
             <div
                 className={`flex-grow-1 d-flex flex-column min-w-0 dashboard-content-area ${collapsed ? 'collapsed' : ''}`}
             >
+                {role === 'organizer' && (
+                    <OrganizerNavbar onToggleSidebar={() => setShowMobileSidebar(!showMobileSidebar)} />
+                )}
+
                 {/* Floating Mobile Sidebar Toggle */}
-                <button
-                    className="d-md-none mobile-sidebar-toggle-floating"
-                    onClick={() => setShowMobileSidebar(!showMobileSidebar)}
-                    aria-label="Toggle Sidebar"
-                >
-                    <FaChevronRight className={showMobileSidebar ? 'rotate-180' : ''} />
-                </button>
+                {role !== 'organizer' && (
+                    <button
+                        className="d-md-none mobile-sidebar-toggle-floating"
+                        onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                        aria-label="Toggle Sidebar"
+                    >
+                        <FaChevronRight className={showMobileSidebar ? 'rotate-180' : ''} />
+                    </button>
+                )}
 
                 <main className="p-0">
                     <AnimatePresence mode="wait">
@@ -255,6 +272,9 @@ const DashboardLayout = ({ children, role }) => {
                         </motion.div>
                     </AnimatePresence>
                 </main>
+
+                {/* Render Floating Chatbot for organizers globally */}
+                {role === 'organizer' && <FloatingChatbot />}
             </div>
         </div>
     );

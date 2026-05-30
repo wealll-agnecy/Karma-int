@@ -679,21 +679,30 @@ exports.verifyTicketScan = async (req, res) => {
             const staffRole = req.user.staffCheckRole || 'ENTRY';
             let isAssigned = false;
 
-            // Check if staff is assigned to the required role for this specific event
-            if (staffRole === 'ENTRY') {
-                isAssigned = event.staffAssignments?.entry?.toString() === req.user.id.toString();
-            } else if (staffRole === 'FOOD') {
-                isAssigned = event.staffAssignments?.food?.toString() === req.user.id.toString();
-            } else if (staffRole === 'PARKING') {
-                isAssigned = event.staffAssignments?.parking?.toString() === req.user.id.toString();
-            } else {
-                // Custom addon - check if staff is assigned to handle this specific addon
-                const customAddons = req.user.customAddonItemNames || [];
-                if (event.staffAssignments?.customAddons && customAddons.length > 0) {
-                    for (const [addonName, assignedStaffId] of event.staffAssignments.customAddons) {
-                        if (customAddons.includes(addonName) && assignedStaffId?.toString() === req.user.id.toString()) {
-                            isAssigned = true;
-                            break;
+            // Check if staff was created by the event organizer
+            if (req.user.createdBy && event.organizer && req.user.createdBy.toString() === event.organizer.toString()) {
+                isAssigned = true;
+            } else if (req.user.assignedEvents && req.user.assignedEvents.includes(event._id)) {
+                // Fallback: check if explicitly assigned to this event
+                isAssigned = true;
+            }
+
+            // Optional: fallback to specific staffAssignments if explicitly set
+            if (!isAssigned && event.staffAssignments) {
+                if (staffRole === 'ENTRY') {
+                    isAssigned = event.staffAssignments?.entry?.toString() === req.user.id.toString();
+                } else if (staffRole === 'FOOD') {
+                    isAssigned = event.staffAssignments?.food?.toString() === req.user.id.toString();
+                } else if (staffRole === 'PARKING') {
+                    isAssigned = event.staffAssignments?.parking?.toString() === req.user.id.toString();
+                } else {
+                    const customAddons = req.user.customAddonItemNames || [];
+                    if (event.staffAssignments?.customAddons && customAddons.length > 0) {
+                        for (const [addonName, assignedStaffId] of event.staffAssignments.customAddons) {
+                            if (customAddons.includes(addonName) && assignedStaffId?.toString() === req.user.id.toString()) {
+                                isAssigned = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -710,9 +719,15 @@ exports.verifyTicketScan = async (req, res) => {
             }
         }
 
-        // ROLE-BASED SCOPING: Filter details based on staff assignment.
         const role = req.user.staffCheckRole || 'ENTRY';
+        const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
         
+        if (!ticket.dailyScans) ticket.dailyScans = new Map();
+        if (!ticket.dailyScans.has(todayStr)) {
+            ticket.dailyScans.set(todayStr, { entry: false, food: false, parking: false, addons: {} });
+        }
+        const dailyState = ticket.dailyScans.get(todayStr);
+
         let scopedDetails = {
             ticketId: ticket._id,
             _id: ticket._id,
@@ -724,47 +739,33 @@ exports.verifyTicketScan = async (req, res) => {
             paymentStatus: currentPaymentStatus,
             amountPaid: currentAmountPaid,
             totalAmount: currentTotalAmount,
-            remainingAmount: currentRemaining
+            remainingAmount: currentRemaining,
+            isScanned: false,
+            foodTaken: false,
+            parkingUsed: false,
+            addonStatuses: {}
         };
 
         if (role === 'ENTRY') {
-            scopedDetails.isScanned = Boolean(ticket.isScanned);
+            scopedDetails.isScanned = Boolean(dailyState.entry);
             scopedDetails.ticketTier = todayPlanInfo;
         } else if (role === 'FOOD') {
-            scopedDetails.foodTaken = ticket.foodTaken || false;
-            // Never expose entry status to food staff
+            scopedDetails.foodTaken = Boolean(dailyState.food);
         } else if (role === 'PARKING') {
-            scopedDetails.parkingUsed = ticket.parkingUsed || false;
+            scopedDetails.parkingUsed = Boolean(dailyState.parking);
         } else if (role === 'CUSTOM_ADDON') {
             const allowedAddons = req.user.customAddonItemNames || [];
             scopedDetails.addonStatuses = {};
-            if (ticket.addonStatuses) {
-                // Ensure ticket.addonStatuses is handled safely whether it's a Map or Object
-                const statuses = ticket.addonStatuses instanceof Map ? Object.fromEntries(ticket.addonStatuses) : ticket.addonStatuses;
-                for (const item of allowedAddons) {
-                    scopedDetails.addonStatuses[item] = statuses[item] || false;
-                }
-            } else {
-                for (const item of allowedAddons) {
-                    scopedDetails.addonStatuses[item] = false;
-                }
+            for (const item of allowedAddons) {
+                scopedDetails.addonStatuses[item] = Boolean(dailyState.addons && dailyState.addons[item]);
             }
         }
 
-        // 1. Cancelled
         if (ticket.status === 'cancelled') {
-            return res.json({
-                success: true,
-                status: "DENIED",
-                message: "Ticket Cancelled",
-                ticket: scopedDetails,
-                data: scopedDetails
-            });
+            return res.json({ success: true, status: "DENIED", message: "Ticket Cancelled", ticket: scopedDetails, data: scopedDetails });
         }
 
-        // 2. Payment Pending
         if (!isPaid) {
-            console.log(`⚠️ [SCAN DENIED] Staff verification failed. Payment Incomplete for ${ticket.ticketCode}. Remaining: ${currentRemaining}`);
             return res.json({
                 success: true,
                 status: "DENIED",
@@ -772,6 +773,37 @@ exports.verifyTicketScan = async (req, res) => {
                 ticket: scopedDetails,
                 data: scopedDetails
             });
+        }
+
+        if (role === 'ENTRY') {
+            if (dailyState.entry) {
+                return res.json({ success: true, status: "DENIED", message: "Entry already used today", ticket: scopedDetails, data: scopedDetails });
+            }
+        } else if (role === 'FOOD') {
+            if (dailyState.food) {
+                return res.json({ success: true, status: "DENIED", message: "Food already claimed today", ticket: scopedDetails, data: scopedDetails });
+            }
+        } else if (role === 'PARKING') {
+            if (dailyState.parking) {
+                return res.json({ success: true, status: "DENIED", message: "Parking already used today", ticket: scopedDetails, data: scopedDetails });
+            }
+        } else if (role === 'CUSTOM_ADDON') {
+            const allowedAddons = req.user.customAddonItemNames || [];
+            const addonName = allowedAddons[0];
+            
+            if (addonName) {
+                const hasAddon = ticket.ticketType?.toLowerCase() === addonName.toLowerCase() ||
+                                 (booking && booking.selectedAddons && booking.selectedAddons.some(a => a.itemName?.toLowerCase() === addonName.toLowerCase())) ||
+                                 (booking && booking.selectedFood && booking.selectedFood.some(f => f.itemName?.toLowerCase() === addonName.toLowerCase()));
+
+                if (!hasAddon) {
+                    return res.json({ success: true, status: "DENIED", message: "Access Denied - Package Not Eligible", ticket: scopedDetails, data: scopedDetails });
+                }
+                
+                if (dailyState.addons && dailyState.addons[addonName]) {
+                    return res.json({ success: true, status: "DENIED", message: `${addonName} already used today`, ticket: scopedDetails, data: scopedDetails });
+                }
+            }
         }
 
         // We no longer atomically mark as used here. 
@@ -789,10 +821,17 @@ exports.verifyTicketScan = async (req, res) => {
             console.error("Scan Log Creation Failed:", logErr.message);
         }
 
+        let successMessage = "Clear for Scan";
+        if (role === 'ENTRY') successMessage = "Entry Access Granted";
+        else if (role === 'FOOD') successMessage = "Food Access Granted";
+        else if (role === 'CUSTOM_ADDON' && req.user.customAddonItemNames?.length > 0) {
+            successMessage = `${req.user.customAddonItemNames[0]} Access Granted`;
+        }
+
         return res.json({
             success: true,
             status: "GRANTED",
-            message: "Clear for Scan",
+            message: successMessage,
             ticket: scopedDetails,
             data: scopedDetails
         });
@@ -825,27 +864,26 @@ exports.updateEntryAccess = async (req, res) => {
         if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
         if (ticket.status === 'cancelled') return res.status(400).json({ success: false, message: 'Ticket cancelled' });
         
-        // AUTHORIZATION: Check event-specific staff assignment
         if (req.user.role === 'staff') {
             const event = ticket.event;
-            if (!event) {
-                return res.status(404).json({ success: false, message: 'Event not found for this ticket' });
-            }
-            
-            // Verify staff is assigned to ENTRY role for this event
-            if (!event.staffAssignments?.entry || event.staffAssignments.entry.toString() !== req.user.id) {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: 'You are not assigned to ENTRY scanning for this event' 
-                });
-            }
+            if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+            let isAssigned = false;
+            if (req.user.createdBy && event.organizer && req.user.createdBy.toString() === event.organizer.toString()) isAssigned = true;
+            else if (req.user.assignedEvents && req.user.assignedEvents.includes(event._id)) isAssigned = true;
+            if (!isAssigned) return res.status(403).json({ success: false, message: 'Not authorized for this event' });
         }
-        
-        const isContinuousMultiDay = Boolean(ticket.event?.continuousMultiDay);
 
-        if (ticket.lastScanDate && ticket.lastScanDate >= startOfToday && !isContinuousMultiDay) {
-            return res.status(400).json({ success: false, message: 'Already used today' });
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        if (!ticket.dailyScans) ticket.dailyScans = new Map();
+        if (!ticket.dailyScans.has(todayStr)) ticket.dailyScans.set(todayStr, { entry: false, food: false, parking: false, addons: {} });
+        
+        const dailyState = ticket.dailyScans.get(todayStr);
+        if (dailyState.entry) {
+            return res.status(400).json({ success: false, message: 'Entry already used today' });
         }
+        dailyState.entry = true;
+        ticket.dailyScans.set(todayStr, dailyState);
+        ticket.markModified('dailyScans');
 
         ticket.isScanned = true;
         ticket.status = 'used';
@@ -896,25 +934,26 @@ exports.updateFoodAccess = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Ticket has been cancelled' });
         }
 
-        // AUTHORIZATION: Check event-specific staff assignment
         if (req.user.role === 'staff') {
             const event = ticket.event;
-            if (!event) {
-                return res.status(404).json({ success: false, message: 'Event not found for this ticket' });
-            }
-            
-            // Verify staff is assigned to FOOD role for this event
-            if (!event.staffAssignments?.food || event.staffAssignments.food.toString() !== req.user.id) {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: 'You are not assigned to FOOD scanning for this event' 
-                });
-            }
+            if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+            let isAssigned = false;
+            if (req.user.createdBy && event.organizer && req.user.createdBy.toString() === event.organizer.toString()) isAssigned = true;
+            else if (req.user.assignedEvents && req.user.assignedEvents.includes(event._id)) isAssigned = true;
+            if (!isAssigned) return res.status(403).json({ success: false, message: 'Not authorized for this event' });
         }
 
-        if (ticket.foodTaken) {
-            return res.status(400).json({ success: false, message: 'Food already claimed' });
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        if (!ticket.dailyScans) ticket.dailyScans = new Map();
+        if (!ticket.dailyScans.has(todayStr)) ticket.dailyScans.set(todayStr, { entry: false, food: false, parking: false, addons: {} });
+        
+        const dailyState = ticket.dailyScans.get(todayStr);
+        if (dailyState.food) {
+            return res.status(400).json({ success: false, message: 'Food already claimed today' });
         }
+        dailyState.food = true;
+        ticket.dailyScans.set(todayStr, dailyState);
+        ticket.markModified('dailyScans');
 
         ticket.foodTaken = true;
         await ticket.save();
@@ -958,25 +997,26 @@ exports.updateParkingAccess = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Ticket has been cancelled' });
         }
 
-        // AUTHORIZATION: Check event-specific staff assignment
         if (req.user.role === 'staff') {
             const event = ticket.event;
-            if (!event) {
-                return res.status(404).json({ success: false, message: 'Event not found for this ticket' });
-            }
-            
-            // Verify staff is assigned to PARKING role for this event
-            if (!event.staffAssignments?.parking || event.staffAssignments.parking.toString() !== req.user.id) {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: 'You are not assigned to PARKING scanning for this event' 
-                });
-            }
+            if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+            let isAssigned = false;
+            if (req.user.createdBy && event.organizer && req.user.createdBy.toString() === event.organizer.toString()) isAssigned = true;
+            else if (req.user.assignedEvents && req.user.assignedEvents.includes(event._id)) isAssigned = true;
+            if (!isAssigned) return res.status(403).json({ success: false, message: 'Not authorized for this event' });
         }
 
-        if (ticket.parkingUsed) {
-            return res.status(400).json({ success: false, message: 'Parking already claimed' });
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        if (!ticket.dailyScans) ticket.dailyScans = new Map();
+        if (!ticket.dailyScans.has(todayStr)) ticket.dailyScans.set(todayStr, { entry: false, food: false, parking: false, addons: {} });
+        
+        const dailyState = ticket.dailyScans.get(todayStr);
+        if (dailyState.parking) {
+            return res.status(400).json({ success: false, message: 'Parking already used today' });
         }
+        dailyState.parking = true;
+        ticket.dailyScans.set(todayStr, dailyState);
+        ticket.markModified('dailyScans');
 
         ticket.parkingUsed = true;
         await ticket.save();
@@ -1020,40 +1060,29 @@ exports.updateAddonsAccess = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Ticket has been cancelled' });
         }
 
-        // AUTHORIZATION: Check event-specific addon staff assignment
         if (req.user.role === 'staff') {
             const event = ticket.event;
-            if (!event) {
-                return res.status(404).json({ success: false, message: 'Event not found for this ticket' });
-            }
-
-            // Verify addon exists in event configuration
-            const addonExists = (event.addonsSettings?.options || []).some(opt => opt.itemName === itemName);
-            if (!addonExists) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: `Addon "${itemName}" is not configured for this event` 
-                });
-            }
-            
-            // Verify staff is assigned to this specific addon for this event
-            const assignedStaffId = event.staffAssignments?.customAddons?.get(itemName);
-            if (!assignedStaffId || assignedStaffId.toString() !== req.user.id) {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: `You are not assigned to distribute "${itemName}" for this event` 
-                });
-            }
+            if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+            let isAssigned = false;
+            if (req.user.createdBy && event.organizer && req.user.createdBy.toString() === event.organizer.toString()) isAssigned = true;
+            else if (req.user.assignedEvents && req.user.assignedEvents.includes(event._id)) isAssigned = true;
+            if (!isAssigned) return res.status(403).json({ success: false, message: 'Not authorized for this event' });
         }
 
-        if (!ticket.addonStatuses) {
-            ticket.addonStatuses = new Map();
-        }
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        if (!ticket.dailyScans) ticket.dailyScans = new Map();
+        if (!ticket.dailyScans.has(todayStr)) ticket.dailyScans.set(todayStr, { entry: false, food: false, parking: false, addons: {} });
         
-        if (ticket.addonStatuses.get(itemName)) {
-            return res.status(400).json({ success: false, message: `${itemName} already claimed` });
+        const dailyState = ticket.dailyScans.get(todayStr);
+        if (!dailyState.addons) dailyState.addons = {};
+        if (dailyState.addons[itemName]) {
+            return res.status(400).json({ success: false, message: `${itemName} already claimed today` });
         }
+        dailyState.addons[itemName] = true;
+        ticket.dailyScans.set(todayStr, dailyState);
+        ticket.markModified('dailyScans');
 
+        if (!ticket.addonStatuses) ticket.addonStatuses = new Map();
         ticket.addonStatuses.set(itemName, true);
         await ticket.save();
 

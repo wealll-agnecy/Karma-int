@@ -112,7 +112,11 @@ const Organizer = User.discriminator('organizer', new mongoose.Schema({
         logo: String,
         address: String,
         selectedEventTypes: [String]
-    }
+    },
+    operationalAddons: [{
+        type: { type: String },
+        name: String
+    }]
 }));
 
 // 2. Staff Schema
@@ -136,6 +140,12 @@ const Staff = User.discriminator('staff', new mongoose.Schema({
     customAddonItemNames: {
         type: [String],
         default: []
+    },
+
+    staffId: {
+        type: String,
+        unique: true,
+        sparse: true
     },
 
     createdBy: { type: mongoose.Schema.ObjectId, ref: 'User' }

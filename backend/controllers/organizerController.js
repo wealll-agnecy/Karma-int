@@ -114,3 +114,76 @@ exports.getOrganizerEventDetails = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Get custom operational addons
+// @route   GET /api/v1/organizer/addons
+// @access  Private (Organizer)
+exports.getAddons = async (req, res) => {
+    try {
+        const organizerId = req.user.id || req.user._id;
+        const organizer = await User.findById(organizerId);
+        if (!organizer || organizer.role !== 'organizer') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        res.status(200).json({ success: true, data: organizer.operationalAddons || [] });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Create a custom operational addon
+// @route   POST /api/v1/organizer/addons
+// @access  Private (Organizer)
+exports.createAddon = async (req, res) => {
+    try {
+        const { type, name } = req.body;
+        if (!type || !name) {
+            return res.status(400).json({ success: false, message: 'Type and name are required' });
+        }
+        
+        const organizerId = req.user.id || req.user._id;
+        const organizer = await User.findById(organizerId);
+        
+        if (!organizer || organizer.role !== 'organizer') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+
+        // Prevent duplicates
+        const exists = organizer.operationalAddons?.find(a => a.name.toLowerCase() === name.toLowerCase());
+        if (exists) {
+            return res.status(400).json({ success: false, message: 'Addon with this name already exists' });
+        }
+
+        organizer.operationalAddons = organizer.operationalAddons || [];
+        organizer.operationalAddons.push({ type, name });
+        await organizer.save();
+
+        res.status(201).json({ success: true, data: organizer.operationalAddons });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Delete a custom operational addon
+// @route   DELETE /api/v1/organizer/addons/:name
+// @access  Private (Organizer)
+exports.deleteAddon = async (req, res) => {
+    try {
+        const { name } = req.params;
+        const organizerId = req.user.id || req.user._id;
+        const organizer = await User.findById(organizerId);
+        
+        if (!organizer || organizer.role !== 'organizer') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+
+        organizer.operationalAddons = organizer.operationalAddons?.filter(
+            a => a.name.toLowerCase() !== name.toLowerCase()
+        ) || [];
+        
+        await organizer.save();
+        res.status(200).json({ success: true, data: organizer.operationalAddons });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};

@@ -20,10 +20,26 @@ const initFirebase = () => {
         let credential;
         if (serviceAccountVar) {
             try {
-                const serviceAccount = JSON.parse(serviceAccountVar);
+                let serviceAccount;
+                const fs = require('fs');
+                const path = require('path');
+                const trimmedVar = serviceAccountVar.trim();
+
+                // Check if the environment variable points to a JSON file
+                if (trimmedVar.endsWith('.json') || fs.existsSync(path.resolve(process.cwd(), trimmedVar))) {
+                    const resolvedPath = path.isAbsolute(trimmedVar)
+                        ? trimmedVar
+                        : path.resolve(process.cwd(), trimmedVar);
+                    const fileContent = fs.readFileSync(resolvedPath, 'utf8');
+                    serviceAccount = JSON.parse(fileContent);
+                } else {
+                    // Fall back to direct JSON parsing if it is an inline string
+                    serviceAccount = JSON.parse(serviceAccountVar);
+                }
+
                 credential = admin.credential.cert(serviceAccount);
             } catch (parseErr) {
-                console.error('❌ [FIREBASE]: Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:', parseErr.message);
+                console.error('❌ [FIREBASE]: Failed to load/parse FIREBASE_SERVICE_ACCOUNT:', parseErr.message);
                 return null;
             }
         } else {

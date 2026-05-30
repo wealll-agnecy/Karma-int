@@ -22,10 +22,13 @@ const TicketView = lazy(() => import('./pages/TicketView'));
 const OrganizerEvents = lazy(() => import('./pages/OrganizerEvents'));
 const OrganizerDashboard = lazy(() => import('./pages/OrganizerDashboard'));
 const OrganizerBookings = lazy(() => import('./pages/OrganizerBookings'));
+const OrganizerLeads = lazy(() => import('./pages/OrganizerLeads'));
 const OrganizerEventAnalytics = lazy(() => import('./pages/OrganizerEventAnalytics'));
+
 const OrganizerStaffManagement = lazy(() => import('./pages/OrganizerStaffManagement'));
+const OrganizerAddons = lazy(() => import('./pages/OrganizerAddons'));
+const OrganizerNotifications = lazy(() => import('./pages/OrganizerNotifications'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const FinanceDashboard = lazy(() => import('./pages/FinanceDashboard'));
 
 const AdminSecretLogin = lazy(() => import('./pages/AdminSecretLogin'));
 
@@ -103,14 +106,17 @@ const AppContent = () => {
                         {/* Organizer Dashboard Routes */}
                         <Route path="/organizer/dashboard" element={<ProtectedRoute roles={['organizer', 'admin']}><DashboardWrapper role="organizer"><OrganizerDashboard /></DashboardWrapper></ProtectedRoute>} />
                         <Route path="/organizer/bookings" element={<ProtectedRoute roles={['organizer', 'admin']}><DashboardWrapper role="organizer"><OrganizerBookings /></DashboardWrapper></ProtectedRoute>} />
+                        <Route path="/organizer/leads" element={<ProtectedRoute roles={['organizer', 'admin']}><DashboardWrapper role="organizer"><OrganizerLeads /></DashboardWrapper></ProtectedRoute>} />
                         <Route path="/organizer/events" element={<ProtectedRoute roles={['organizer', 'admin']}><DashboardWrapper role="organizer"><OrganizerEvents /></DashboardWrapper></ProtectedRoute>} />
                         <Route path="/organizer/event/:id" element={<ProtectedRoute roles={['organizer', 'admin']}><DashboardWrapper role="organizer"><OrganizerEventAnalytics /></DashboardWrapper></ProtectedRoute>} />
+
                         <Route path="/organizer/staff" element={<ProtectedRoute roles={['organizer', 'admin']}><DashboardWrapper role="organizer"><OrganizerStaffManagement /></DashboardWrapper></ProtectedRoute>} />
+                        <Route path="/organizer/addons" element={<ProtectedRoute roles={['organizer', 'admin']}><DashboardWrapper role="organizer"><OrganizerAddons /></DashboardWrapper></ProtectedRoute>} />
+                        <Route path="/organizer/notifications" element={<ProtectedRoute roles={['organizer', 'admin']}><DashboardWrapper role="organizer"><OrganizerNotifications /></DashboardWrapper></ProtectedRoute>} />
 
 
                         {/* Admin Dashboard Routes */}
                         <Route path="/admin/dashboard" element={<ProtectedRoute roles={['admin']}><DashboardWrapper role="admin"><AdminDashboard /></DashboardWrapper></ProtectedRoute>} />
-                        <Route path="/admin/finance" element={<ProtectedRoute roles={['admin']}><DashboardWrapper role="admin"><FinanceDashboard /></DashboardWrapper></ProtectedRoute>} />
 
 
                         <Route path="/admin/staff" element={<ProtectedRoute roles={['admin']}><DashboardWrapper role="admin"><AdminStaffManagement /></DashboardWrapper></ProtectedRoute>} />

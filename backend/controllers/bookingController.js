@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { createTicketAfterPayment } = require('./ticketController');
 const { sendBookingConfirmation } = require('../services/emailService');
 const { generateTicketPDF } = require('../services/pdfService');
@@ -148,7 +149,7 @@ exports.checkout = async (req, res) => {
 exports.verifyPayment = async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId, amount } = req.body;
-        const booking = await Booking.findById(bookingId).populate('event', 'title date venue bannerImage foodSettings addonsSettings isMultiDay multiDayPlan ticketTypes');
+        const booking = await Booking.findById(bookingId).populate('event', 'title date venue bannerImage foodSettings addonsSettings isMultiDay multiDayPlan ticketTypes organizer');
         if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
         // If amount is not passed, we fallback to totalAmount (assume full payment)
@@ -264,6 +265,21 @@ exports.verifyPayment = async (req, res) => {
         // Queue Event Reminders
         const { scheduleReminders } = require('../queue/notificationQueue');
         await scheduleReminders(booking.user, booking.event._id, booking.event.date);
+
+        // CREATE NOTIFICATION FOR ORGANIZER
+        try {
+            const notifType = booking.paymentStatus === 'completed' ? 'booking_confirmed' : 'system';
+            const notifTitle = booking.paymentStatus === 'completed' ? 'Full Payment Received & Ticket Booked' : 'Partial Payment Received & Ticket Booked';
+            await Notification.create({
+                user: booking.event.organizer,
+                title: notifTitle,
+                message: `An attendee just booked a ticket for ${booking.event.title}. Amount Paid: ₹${amountFromOrder}.`,
+                type: notifType,
+                eventId: booking.event._id
+            });
+        } catch (notifErr) {
+            console.error("Failed to create organizer notification:", notifErr);
+        }
 
         res.status(200).json({ success: true, message: "Booking successful", ticketId: ticket._id });
     } catch (err) {
@@ -469,6 +485,21 @@ exports.demoBooking = async (req, res) => {
         const { scheduleReminders } = require('../queue/notificationQueue');
         await scheduleReminders(userId, eventId, event.date);
 
+        // CREATE NOTIFICATION FOR ORGANIZER
+        try {
+            const notifType = booking.paymentStatus === 'completed' ? 'booking_confirmed' : 'system';
+            const notifTitle = booking.paymentStatus === 'completed' ? 'Full Payment Received & Ticket Booked' : 'Partial Payment Received & Ticket Booked';
+            await Notification.create({
+                user: event.organizer,
+                title: notifTitle,
+                message: `An attendee just booked a ticket for ${event.title}. Amount Paid: ₹${paid}.`,
+                type: notifType,
+                eventId: event._id
+            });
+        } catch (notifErr) {
+            console.error("Failed to create organizer notification:", notifErr);
+        }
+
         res.status(200).json({ 
             success: true, 
             message: "Success! Ticket sent to email", 
@@ -517,7 +548,7 @@ exports.initiateInstallment = async (req, res) => {
 exports.verifyInstallment = async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, bookingId, amount } = req.body;
-        const booking = await Booking.findById(bookingId).populate('event', 'title date venue bannerImage');
+        const booking = await Booking.findById(bookingId).populate('event', 'title date venue bannerImage organizer');
         if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
         booking.amountPaid = (booking.amountPaid || 0) + parseFloat(amount);
@@ -548,6 +579,21 @@ exports.verifyInstallment = async (req, res) => {
             for (const t of tickets) {
                 await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
             }
+        }
+
+        // CREATE NOTIFICATION FOR ORGANIZER
+        try {
+            const notifType = booking.paymentStatus === 'completed' ? 'booking_confirmed' : 'system';
+            const notifTitle = booking.paymentStatus === 'completed' ? 'Full Payment Completed' : 'Installment Received';
+            await Notification.create({
+                user: booking.event.organizer,
+                title: notifTitle,
+                message: `An attendee just paid an installment for ${booking.event.title}. Amount Paid: ₹${amount}.`,
+                type: notifType,
+                eventId: booking.event._id
+            });
+        } catch (notifErr) {
+            console.error("Failed to create organizer notification:", notifErr);
         }
 
         res.status(200).json({ 

@@ -308,21 +308,25 @@ const StaffScanner = () => {
                             <div className="scan-status">
                                 <h2 className={scanResult.status === 'GRANTED' ? 'green' : 'red'}>
                                     {scanResult.status === 'GRANTED' ? (
-                                        <><FaCheckCircle /> Verification Passed</>
+                                        <><FaCheckCircle /> {scanResult.message}</>
                                     ) : (
-                                        <><FaTimesCircle /> Verification Failed</>
+                                        <><FaTimesCircle /> {scanResult.message}</>
                                     )}
                                 </h2>
                             </div>
 
                             <div className="attendee-card">
-                                <div className="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <h3>{scanResult.ticket?.name || 'Unknown Attendee'}</h3>
+                                <div className="d-flex justify-content-between align-items-center gap-3 mb-3">
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                        <h3 className="text-truncate mb-0 text-start" style={{ fontSize: '20px', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                                            {scanResult.ticket?.name || 'Unknown Attendee'}
+                                        </h3>
                                     </div>
-                                    <div className={`scan-reason ${scanResult.reason?.toLowerCase().replace(' ', '-')}`}>
-                                        {scanResult.message}
-                                    </div>
+                                    {(scanResult.reason || scanResult.status) && (
+                                        <div className={`scan-reason ${scanResult.reason ? scanResult.reason.toLowerCase().replace(/ /g, '-') : (scanResult.status === 'GRANTED' ? 'valid-ticket' : 'false-ticket')}`}>
+                                            {scanResult.reason || (scanResult.status === 'GRANTED' ? 'Valid' : 'Denied')}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="info-row">

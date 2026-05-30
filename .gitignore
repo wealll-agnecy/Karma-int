@@ -16,4 +16,6 @@ backend/debug_smtp.js
 backend/inspect_ticket.js
 backend/test_calc.js
 backend/*.log
+backend/config/firebase-service-account.json
+
 

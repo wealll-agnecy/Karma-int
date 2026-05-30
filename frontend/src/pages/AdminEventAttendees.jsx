@@ -1,10 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Table, Badge, Button, Spinner } from 'react-bootstrap';
-import { FaUser, FaEnvelope, FaPhone, FaTicketAlt, FaCalendarDay, FaWallet, FaArrowLeft, FaSearch, FaUsers } from 'react-icons/fa';
+import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Modal } from 'react-bootstrap';
+import { FaUser, FaEnvelope, FaPhone, FaTicketAlt, FaCalendarDay, FaWallet, FaArrowLeft, FaSearch, FaUsers, FaEye, FaFilePdf, FaFileExcel } from 'react-icons/fa';
+import { formatCurrency } from '../utils/formatUtils';
 import * as analyticsApi from '../api/analyticsApi';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import '../css/AdminStyles.css';
 
 const AdminEventAttendees = () => {
@@ -14,6 +18,8 @@ const AdminEventAttendees = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('all');
+    const [showModal, setShowModal] = useState(false);
+    const [selectedBooking, setSelectedBooking] = useState(null);
 
     useEffect(() => {
         if (!eventId || eventId === 'undefined') {
@@ -35,7 +41,8 @@ const AdminEventAttendees = () => {
                         paymentStatus: booking.paymentStatus || 'unknown',
                         orderId: booking.orderId || 'N/A',
                         bookingId: booking._id,
-                        bookingDate: booking.createdAt
+                        bookingDate: booking.createdAt,
+                        rawBooking: booking
                     }))
                 );
                 setAttendees(flattened);
@@ -62,6 +69,68 @@ const AdminEventAttendees = () => {
     const silverCount = attendees.filter(a => a.plan?.toLowerCase() === 'silver').length;
     const goldCount = attendees.filter(a => a.plan?.toLowerCase() === 'gold').length;
     const platinumCount = attendees.filter(a => a.plan?.toLowerCase() === 'platinum').length;
+
+    const handleShowDetails = (attendee) => {
+        const booking = attendee.rawBooking || {};
+        setSelectedBooking({
+            attendeeName: booking.user?.name || booking.attendeeDetails?.[0]?.name || attendee.name,
+            email: booking.user?.email || booking.attendeeDetails?.[0]?.email || attendee.email,
+            phone: booking.user?.phone || booking.attendeeDetails?.[0]?.phone || attendee.phone,
+            eventName: booking.event?.title || attendee.eventName || 'Event',
+            ticketTier: attendee.ticketType || booking.ticketType || 'Standard',
+            bookedQuantity: booking.quantity || booking.attendeeDetails?.length || 1,
+            attendeeDetails: booking.attendeeDetails || [attendee],
+            selectedFood: booking.selectedFood || [],
+            selectedAddons: booking.selectedAddons || [],
+            totalAmount: booking.totalAmount || attendee.totalAmount || 0,
+            amountPaid: booking.amountPaid || attendee.amountPaid || 0,
+            remainingAmount: Math.max((booking.totalAmount || attendee.totalAmount || 0) - (booking.amountPaid || attendee.amountPaid || 0), 0)
+        });
+        setShowModal(true);
+    };
+
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+        doc.text("Event Attendees", 14, 15);
+        const tableColumn = ["Name", "Email", "Phone", "Ticket Type", "Booking Date", "Amount Paid"];
+        const tableRows = [];
+
+        filteredAttendees.forEach(attendee => {
+            const rowData = [
+                attendee.name || 'N/A',
+                attendee.email || 'N/A',
+                attendee.phone || 'N/A',
+                attendee.ticketType || 'N/A',
+                new Date(attendee.bookingDate).toLocaleDateString(),
+                `INR ${attendee.amountPaid}`
+            ];
+            tableRows.push(rowData);
+        });
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 20,
+        });
+        doc.save(`Attendees_${eventId}.pdf`);
+    };
+
+    const handleExportExcel = () => {
+        const data = filteredAttendees.map(attendee => ({
+            Name: attendee.name,
+            Email: attendee.email,
+            Phone: attendee.phone,
+            'Ticket Type': attendee.ticketType,
+            'Booking Date': new Date(attendee.bookingDate).toLocaleDateString(),
+            'Amount Paid': attendee.amountPaid,
+            'Total Order': attendee.totalAmount
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Attendees");
+        XLSX.writeFile(wb, `Attendees_${eventId}.xlsx`);
+    };
 
     if (loading) {
         return (
@@ -94,16 +163,33 @@ const AdminEventAttendees = () => {
                         </div>
                     </div>
                     
-                    <div className="admin-search-wrapper position-relative">
-                        <FaSearch className="position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" />
-                        <input 
-                            type="text" 
-                            className="form-control ps-5 py-3 rounded-pill border-0 shadow-sm" 
-                            placeholder="" 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{ minWidth: '350px' }}
-                        />
+                    <div className="d-flex align-items-center gap-3">
+                        <Button 
+                            variant="danger" 
+                            className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
+                            onClick={handleExportPDF}
+                        >
+                            <FaFilePdf /> <span className="d-none d-md-inline">PDF</span>
+                        </Button>
+                        <Button 
+                            variant="success" 
+                            className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
+                            onClick={handleExportExcel}
+                        >
+                            <FaFileExcel /> <span className="d-none d-md-inline">Excel</span>
+                        </Button>
+
+                        <div className="admin-search-wrapper position-relative">
+                            <FaSearch className="position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" />
+                            <input 
+                                type="text" 
+                                className="form-control ps-5 py-3 rounded-pill border-0 shadow-sm" 
+                                placeholder="Search..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{ minWidth: '250px' }}
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -199,6 +285,7 @@ const AdminEventAttendees = () => {
                                     <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Ticket Type</th>
                                     <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Booking Date</th>
                                     <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Amount Paid</th>
+                                    <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-end">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -250,6 +337,15 @@ const AdminEventAttendees = () => {
                                                 <div className="fw-black text-dark h6 mb-0">₹{attendee.amountPaid.toLocaleString()}</div>
                                                 <div className="small text-secondary fw-bold" style={{ fontSize: '0.65rem' }}>TOTAL ORDER: ₹{attendee.totalAmount}</div>
                                             </td>
+                                            <td className="px-4 py-4 text-end">
+                                                <Button 
+                                                    variant="link" 
+                                                    className="p-0 text-pink shadow-none"
+                                                    onClick={() => handleShowDetails(attendee)}
+                                                >
+                                                    <FaEye size={18} />
+                                                </Button>
+                                            </td>
                                         </tr>
                                     ))
                                 )}
@@ -283,9 +379,18 @@ const AdminEventAttendees = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                        <Badge className="bg-light text-dark border border-slate-200 rounded-pill px-3 py-2 fw-bold small text-uppercase flex-shrink-0">
-                                            {attendee.ticketType}
-                                        </Badge>
+                                        <div className="d-flex align-items-center gap-2">
+                                            <Button 
+                                                variant="link" 
+                                                className="p-0 text-pink shadow-none"
+                                                onClick={() => handleShowDetails(attendee)}
+                                            >
+                                                <FaEye size={18} />
+                                            </Button>
+                                            <Badge className="bg-light text-dark border border-slate-200 rounded-pill px-3 py-2 fw-bold small text-uppercase flex-shrink-0">
+                                                {attendee.ticketType}
+                                            </Badge>
+                                        </div>
                                     </div>
                                     
                                     <div className="d-flex flex-column gap-2 mb-3">
@@ -320,6 +425,197 @@ const AdminEventAttendees = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Attendee Details Modal */}
+                <Modal 
+                    show={showModal} 
+                    onHide={() => setShowModal(false)} 
+                    centered 
+                    size="lg"
+                    className="premium-details-modal"
+                >
+                    <Modal.Header closeButton style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <Modal.Title style={{ fontFamily: 'Outfit, sans-serif', fontWeight: '700' }}>
+                            Booking Details Summary
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                        {selectedBooking && (
+                            <div>
+                                {/* Section 1: Primary Attendee Info */}
+                                <div className="mb-4">
+                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Primary Attendee</h6>
+                                    <Row className="g-3">
+                                        <Col md={4}>
+                                            <div className="p-3 border rounded-3 bg-light">
+                                                <div className="text-muted small">Full Name</div>
+                                                <div className="fw-bold">{selectedBooking.attendeeName}</div>
+                                            </div>
+                                        </Col>
+                                        <Col md={4}>
+                                            <div className="p-3 border rounded-3 bg-light">
+                                                <div className="text-muted small">Email Address</div>
+                                                <div className="fw-bold text-truncate">{selectedBooking.email}</div>
+                                            </div>
+                                        </Col>
+                                        <Col md={4}>
+                                            <div className="p-3 border rounded-3 bg-light">
+                                                <div className="text-muted small">Phone Number</div>
+                                                <div className="fw-bold">{selectedBooking.phone || 'N/A'}</div>
+                                            </div>
+                                        </Col>
+                                    </Row>
+                                </div>
+
+                                {/* Section 2: Booking Info */}
+                                <div className="mb-4 border-top pt-4">
+                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Booking & Plan Information</h6>
+                                    <Row className="g-3">
+                                        <Col md={6}>
+                                            <div className="p-3 border rounded-3 bg-light">
+                                                <div className="text-muted small">Event Name</div>
+                                                <div className="fw-bold text-pink">{selectedBooking.eventName}</div>
+                                            </div>
+                                        </Col>
+                                        <Col md={3}>
+                                            <div className="p-3 border rounded-3 bg-light">
+                                                <div className="text-muted small">Plan Type</div>
+                                                <div className="fw-bold">{selectedBooking.ticketTier}</div>
+                                            </div>
+                                        </Col>
+                                        <Col md={3}>
+                                            <div className="p-3 border rounded-3 bg-light">
+                                                <div className="text-muted small">Tickets Booked</div>
+                                                <div className="fw-black text-primary fs-5">
+                                                    {selectedBooking.bookedQuantity || 1} Ticket(s)
+                                                </div>
+                                            </div>
+                                        </Col>
+                                    </Row>
+                                </div>
+
+                                {/* Section 3: Group Members */}
+                                <div className="mb-4 border-top pt-4">
+                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Group Members ({selectedBooking.attendeeDetails?.length || 0})</h6>
+                                    {selectedBooking.attendeeDetails && selectedBooking.attendeeDetails.length > 0 ? (
+                                        <div className="table-responsive border rounded-3">
+                                            <Table hover className="m-0 align-middle">
+                                                <thead className="bg-light">
+                                                    <tr className="small text-uppercase fw-bold text-slate">
+                                                        <th className="px-3 py-2">#</th>
+                                                        <th className="py-2">Member Name</th>
+                                                        <th className="py-2">Phone / Contact</th>
+                                                        <th className="px-3 py-2">Email</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {selectedBooking.attendeeDetails.map((member, index) => (
+                                                        <tr key={index}>
+                                                            <td className="px-3 py-2 text-muted small">{index + 1}</td>
+                                                            <td className="py-2 fw-bold">{member.name}</td>
+                                                            <td className="py-2">{member.phone || 'N/A'}</td>
+                                                            <td className="px-3 py-2 text-muted small">{member.email || 'N/A'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </Table>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-3 text-muted border rounded-3 bg-light-subtle small">
+                                            No secondary group members added. Single ticket booking.
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Section 4: Food & Addons Selection (Conditional) */}
+                                {((selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0) || 
+                                  (selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0)) && (
+                                    <div className="mb-4 border-top pt-4">
+                                        <Row>
+                                            {selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 && (
+                                                <Col md={selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 ? 6 : 12}>
+                                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Food Orders</h6>
+                                                    <div className="table-responsive border rounded-3">
+                                                        <Table hover className="m-0 align-middle small">
+                                                            <thead className="bg-light">
+                                                                <tr>
+                                                                    <th className="px-3 py-2">Item</th>
+                                                                    <th className="py-2">Type</th>
+                                                                    <th className="px-3 py-2 text-end">Qty</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {selectedBooking.selectedFood.map((food, idx) => (
+                                                                    <tr key={idx}>
+                                                                        <td className="px-3 py-2 fw-bold">{food.itemName}</td>
+                                                                        <td className="py-2"><Badge bg={food.type === 'veg' ? 'success' : 'danger'}>{food.type}</Badge></td>
+                                                                        <td className="px-3 py-2 text-end">{food.quantity}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </Table>
+                                                    </div>
+                                                </Col>
+                                            )}
+
+                                            {selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 && (
+                                                <Col md={selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 ? 6 : 12}>
+                                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Addons / Goodies</h6>
+                                                    <div className="table-responsive border rounded-3">
+                                                        <Table hover className="m-0 align-middle small">
+                                                            <thead className="bg-light">
+                                                                <tr>
+                                                                    <th className="px-3 py-2">Item</th>
+                                                                    <th className="px-3 py-2 text-end">Qty</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {selectedBooking.selectedAddons.map((addon, idx) => (
+                                                                    <tr key={idx}>
+                                                                        <td className="px-3 py-2 fw-bold">{addon.itemName}</td>
+                                                                        <td className="px-3 py-2 text-end">{addon.quantity}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </Table>
+                                                    </div>
+                                                </Col>
+                                            )}
+                                        </Row>
+                                    </div>
+                                )}
+
+                                {/* Section 5: Financial Summary */}
+                                <div className="border-top pt-4 mb-2">
+                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Payment Summary</h6>
+                                    <div className="p-3 border rounded-3" style={{ background: 'linear-gradient(135deg, #fff 0%, #fef2f2 100%)' }}>
+                                        <Row className="g-3 text-center">
+                                            <Col xs={4}>
+                                                <div className="text-muted small">Total Cost</div>
+                                                <div className="fw-bold fs-5 text-dark">{formatCurrency(selectedBooking.totalAmount)}</div>
+                                            </Col>
+                                            <Col xs={4} className="border-start border-end">
+                                                <div className="text-muted small">Amount Paid</div>
+                                                <div className="fw-bold fs-5 text-success">{formatCurrency(selectedBooking.amountPaid)}</div>
+                                            </Col>
+                                            <Col xs={4}>
+                                                <div className="text-muted small">Outstanding Balance</div>
+                                                <div className={`fw-bold fs-5 ${selectedBooking.remainingAmount > 0 ? 'text-danger' : 'text-slate'}`}>
+                                                    {formatCurrency(selectedBooking.remainingAmount)}
+                                                </div>
+                                            </Col>
+                                        </Row>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </Modal.Body>
+                    <Modal.Footer style={{ borderTop: '1px solid #f1f5f9' }}>
+                        <Button variant="secondary" className="rounded-3 px-4 fw-bold" onClick={() => setShowModal(false)}>
+                            Close Details
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
             </Container>
         </div>
     );

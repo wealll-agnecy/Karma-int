@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Container, Table, Badge, Spinner, Alert, Card, Row, Col, Button, Modal } from 'react-bootstrap';
 import apiClient from '../api/apiClient';
-import { FaTicketAlt, FaWallet, FaCheckCircle, FaExclamationCircle, FaEye } from 'react-icons/fa';
+import { FaTicketAlt, FaWallet, FaCheckCircle, FaExclamationCircle, FaEye, FaFilePdf, FaFileExcel } from 'react-icons/fa';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import '../css/dashboard.css';
 import { formatCurrency } from '../utils/formatUtils';
- 
+
 const OrganizerBookings = () => {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [showModal, setShowModal] = useState(false);
- 
+    const [filter, setFilter] = useState('all'); // 'all', 'pending', 'completed'
+
     useEffect(() => {
         const fetchBookings = async () => {
             try {
@@ -26,6 +30,49 @@ const OrganizerBookings = () => {
         fetchBookings();
     }, []);
 
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+        doc.text("Organizer Bookings", 14, 15);
+        const tableColumn = ["Attendee Name", "Email", "Event", "Date", "Total Amount", "Amount Paid"];
+        const tableRows = [];
+
+        bookings.forEach(booking => {
+            const rowData = [
+                booking.user?.name || 'Unknown',
+                booking.user?.email || 'N/A',
+                booking.event?.title || 'N/A',
+                new Date(booking.event?.date).toLocaleDateString(),
+                `INR ${booking.totalAmount}`,
+                `INR ${booking.amountPaid || 0}`
+            ];
+            tableRows.push(rowData);
+        });
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 20,
+        });
+        doc.save(`Bookings.pdf`);
+    };
+
+    const handleExportExcel = () => {
+        const data = bookings.map(booking => ({
+            'Attendee Name': booking.user?.name || 'Unknown',
+            'Email': booking.user?.email || 'N/A',
+            'Event Name': booking.event?.title || 'N/A',
+            'Event Date': new Date(booking.event?.date).toLocaleDateString(),
+            'Total Amount': booking.totalAmount,
+            'Amount Paid': booking.amountPaid || 0,
+            'Pending Dues': booking.totalAmount - (booking.amountPaid || 0)
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Bookings");
+        XLSX.writeFile(wb, `Bookings.xlsx`);
+    };
+
     if (loading) {
         return (
             <div className="d-flex justify-content-center align-items-center vh-100">
@@ -38,15 +85,41 @@ const OrganizerBookings = () => {
     const totalCollected = bookings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
     const totalPending = totalExpected - totalCollected;
 
+    const filteredBookings = bookings.filter(b => {
+        const isPaid = (b.amountPaid || 0) >= b.totalAmount;
+        if (filter === 'completed') return isPaid;
+        if (filter === 'pending') return !isPaid;
+        return true;
+    });
+
     return (
         <div className="dashboard-page">
             <Container fluid className="px-md-5">
-                <div className="dashboard-header mb-5">
-                    <h2 className="dashboard-title-main">Attendee Bookings</h2>
-                    <p className="dashboard-subtext">Monitor ticket sales and payment collection status.</p>
+                <div className="dashboard-header  mt-5 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <h2 className="dashboard-title-main">Attendee Bookings</h2>
+                        <p className="dashboard-subtext">Monitor ticket sales and payment collection status.</p>
+                    </div>
+                    <div className="d-flex align-items-center gap-3">
+                        <Button
+                            variant="danger"
+                            className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
+                            onClick={handleExportPDF}
+                        >
+                            <FaFilePdf /> <span className="d-none d-md-inline">PDF</span>
+                        </Button>
+                        <Button
+                            variant="success"
+                            className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
+                            onClick={handleExportExcel}
+                        >
+                            <FaFileExcel /> <span className="d-none d-md-inline">Excel</span>
+                        </Button>
+                    </div>
                 </div>
 
-                <div className="stats-grid-saas mb-5">
+                {/* --- DESKTOP STATS --- */}
+                <div className="stats-grid-saas mb-5 d-none d-md-grid">
                     <div className="dashboard-card shadow-sm">
                         <span className="card-title-sm">Gross Sales</span>
                         <h3 className="card-value-lg">{formatCurrency(totalExpected)}</h3>
@@ -61,9 +134,75 @@ const OrganizerBookings = () => {
                     </div>
                 </div>
 
+                {/* --- MOBILE STATS (Side-by-side Horizontal Scroll) --- */}
+                <div className="d-flex d-md-none flex-nowrap overflow-x-auto mb-4 pb-2" style={{ gap: '12px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    <div className="dashboard-card shadow-sm flex-shrink-0" style={{ minWidth: '160px', padding: '16px' }}>
+                        <span className="card-title-sm" style={{ fontSize: '0.75rem' }}>Gross Sales</span>
+                        <h3 className="card-value-lg" style={{ fontSize: '1.5rem' }}>{formatCurrency(totalExpected)}</h3>
+                    </div>
+                    <div className="dashboard-card shadow-sm flex-shrink-0" style={{ minWidth: '160px', padding: '16px' }}>
+                        <span className="card-title-sm" style={{ fontSize: '0.75rem' }}>Collected</span>
+                        <h3 className="card-value-lg text-success" style={{ fontSize: '1.5rem' }}>{formatCurrency(totalCollected)}</h3>
+                    </div>
+                    <div className="dashboard-card shadow-sm flex-shrink-0" style={{ minWidth: '160px', padding: '16px' }}>
+                        <span className="card-title-sm" style={{ fontSize: '0.75rem' }}>Pending Dues</span>
+                        <h3 className="card-value-lg text-warning" style={{ fontSize: '1.5rem' }}>{formatCurrency(totalPending)}</h3>
+                    </div>
+                </div>
+
+                {/* --- DESKTOP FILTERS --- */}
+                <div className="d-none d-md-flex flex-wrap gap-2 mb-4">
+                    <Button 
+                        variant={filter === 'all' ? 'dark' : 'outline-dark'} 
+                        onClick={() => setFilter('all')} 
+                        className="rounded-pill px-4 shadow-none fw-bold small"
+                    >
+                        All Bookings
+                    </Button>
+                    <Button 
+                        variant={filter === 'pending' ? 'warning' : 'outline-warning'} 
+                        onClick={() => setFilter('pending')} 
+                        className={`rounded-pill px-4 shadow-none fw-bold small ${filter === 'pending' ? 'text-dark' : ''}`}
+                    >
+                        Pending Dues
+                    </Button>
+                    <Button 
+                        variant={filter === 'completed' ? 'success' : 'outline-success'} 
+                        onClick={() => setFilter('completed')} 
+                        className="rounded-pill px-4 shadow-none fw-bold small"
+                    >
+                        Completed
+                    </Button>
+                </div>
+
+                {/* --- MOBILE FILTERS (Side-by-side Horizontal Scroll) --- */}
+                <div className="d-flex d-md-none flex-nowrap overflow-x-auto gap-2 mb-4 pb-2" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    <Button 
+                        variant={filter === 'all' ? 'dark' : 'outline-dark'} 
+                        onClick={() => setFilter('all')} 
+                        className="rounded-pill px-4 shadow-none fw-bold small text-nowrap"
+                    >
+                        All Bookings
+                    </Button>
+                    <Button 
+                        variant={filter === 'pending' ? 'warning' : 'outline-warning'} 
+                        onClick={() => setFilter('pending')} 
+                        className={`rounded-pill px-4 shadow-none fw-bold small text-nowrap ${filter === 'pending' ? 'text-dark' : ''}`}
+                    >
+                        Pending Dues
+                    </Button>
+                    <Button 
+                        variant={filter === 'completed' ? 'success' : 'outline-success'} 
+                        onClick={() => setFilter('completed')} 
+                        className="rounded-pill px-4 shadow-none fw-bold small text-nowrap"
+                    >
+                        Completed
+                    </Button>
+                </div>
+
                 {error && <Alert variant="danger">{error}</Alert>}
 
-                <div className="dashboard-card shadow-sm d-none d-lg-block">
+                <div className="bg-white p-4 rounded-4 shadow-sm border d-none d-lg-block mb-5">
                     <div className="table-responsive rounded-4 border overflow-hidden shadow-sm">
                         <Table hover className="m-0 align-middle text-nowrap">
                             <thead className="bg-light">
@@ -76,7 +215,7 @@ const OrganizerBookings = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {bookings.map((booking) => (
+                                {filteredBookings.map((booking) => (
                                     <tr key={booking._id} className="border-bottom border-slate-100">
                                         <td className="px-4 py-3">
                                             <div className="d-flex align-items-center justify-content-between">
@@ -84,8 +223,8 @@ const OrganizerBookings = () => {
                                                     <div className="fw-bold">{booking.user?.name || 'Unknown'}</div>
                                                     <div className="tiny-text text-muted">{booking.user?.email}</div>
                                                 </div>
-                                                <Button 
-                                                    variant="link" 
+                                                <Button
+                                                    variant="link"
                                                     className="p-1 text-pink shadow-none ms-2"
                                                     onClick={() => {
                                                         setSelectedBooking(booking);
@@ -138,9 +277,9 @@ const OrganizerBookings = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                {bookings.length === 0 && (
+                                {filteredBookings.length === 0 && (
                                     <tr>
-                                        <td colSpan="5" className="text-center py-5 text-muted">No bookings detected in sector.</td>
+                                        <td colSpan="5" className="text-center py-5 text-muted">No bookings matched the selected filter.</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -150,7 +289,7 @@ const OrganizerBookings = () => {
 
                 {/* Mobile View: Premium Vertical Cards */}
                 <div className="d-lg-none d-flex flex-column gap-3 mb-5">
-                    {bookings.map((booking) => {
+                    {filteredBookings.map((booking) => {
                         const paidAmount = booking.amountPaid || 0;
                         const totalAmount = booking.totalAmount || 1;
                         const progress = Math.min((paidAmount / totalAmount) * 100, 100);
@@ -167,7 +306,7 @@ const OrganizerBookings = () => {
                                     height: '4px',
                                     background: 'linear-gradient(90deg, #ee749f, #a855f7)'
                                 }} />
-                                
+
                                 <div className="d-flex justify-content-between align-items-start mb-3">
                                     <div>
                                         <div className="fw-bold text-dark fs-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -176,8 +315,8 @@ const OrganizerBookings = () => {
                                         <div className="text-muted small" style={{ fontSize: '0.75rem' }}>{booking.user?.email}</div>
                                     </div>
                                     <div className="d-flex align-items-center gap-2">
-                                        <Button 
-                                            variant="link" 
+                                        <Button
+                                            variant="link"
                                             className="p-0 text-pink shadow-none"
                                             onClick={() => {
                                                 setSelectedBooking(booking);
@@ -238,18 +377,18 @@ const OrganizerBookings = () => {
                             </Card>
                         );
                     })}
-                    {bookings.length === 0 && (
+                    {filteredBookings.length === 0 && (
                         <Card className="border-0 rounded-4 p-5 text-center shadow-sm bg-white">
-                            <div className="text-muted py-3">No bookings detected in sector.</div>
+                            <div className="text-muted py-3">No bookings matched the selected filter.</div>
                         </Card>
                     )}
                 </div>
 
                 {/* Attendee Details Modal */}
-                <Modal 
-                    show={showModal} 
-                    onHide={() => setShowModal(false)} 
-                    centered 
+                <Modal
+                    show={showModal}
+                    onHide={() => setShowModal(false)}
+                    centered
                     size="lg"
                     className="premium-details-modal"
                 >
@@ -347,62 +486,62 @@ const OrganizerBookings = () => {
                                 </div>
 
                                 {/* Section 4: Food & Addons Selection (Conditional) */}
-                                {((selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0) || 
-                                  (selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0)) && (
-                                    <div className="mb-4 border-top pt-4">
-                                        <Row>
-                                            {selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 && (
-                                                <Col md={selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 ? 6 : 12}>
-                                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Food Orders</h6>
-                                                    <div className="table-responsive border rounded-3">
-                                                        <Table hover className="m-0 align-middle small">
-                                                            <thead className="bg-light">
-                                                                <tr>
-                                                                    <th className="px-3 py-2">Item</th>
-                                                                    <th className="py-2">Type</th>
-                                                                    <th className="px-3 py-2 text-end">Qty</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {selectedBooking.selectedFood.map((food, idx) => (
-                                                                    <tr key={idx}>
-                                                                        <td className="px-3 py-2 fw-bold">{food.itemName}</td>
-                                                                        <td className="py-2"><Badge bg={food.type === 'veg' ? 'success' : 'danger'}>{food.type}</Badge></td>
-                                                                        <td className="px-3 py-2 text-end">{food.quantity}</td>
+                                {((selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0) ||
+                                    (selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0)) && (
+                                        <div className="mb-4 border-top pt-4">
+                                            <Row>
+                                                {selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 && (
+                                                    <Col md={selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 ? 6 : 12}>
+                                                        <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Food Orders</h6>
+                                                        <div className="table-responsive border rounded-3">
+                                                            <Table hover className="m-0 align-middle small">
+                                                                <thead className="bg-light">
+                                                                    <tr>
+                                                                        <th className="px-3 py-2">Item</th>
+                                                                        <th className="py-2">Type</th>
+                                                                        <th className="px-3 py-2 text-end">Qty</th>
                                                                     </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </Table>
-                                                    </div>
-                                                </Col>
-                                            )}
+                                                                </thead>
+                                                                <tbody>
+                                                                    {selectedBooking.selectedFood.map((food, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td className="px-3 py-2 fw-bold">{food.itemName}</td>
+                                                                            <td className="py-2"><Badge bg={food.type === 'veg' ? 'success' : 'danger'}>{food.type}</Badge></td>
+                                                                            <td className="px-3 py-2 text-end">{food.quantity}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </Table>
+                                                        </div>
+                                                    </Col>
+                                                )}
 
-                                            {selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 && (
-                                                <Col md={selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 ? 6 : 12}>
-                                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Addons / Goodies</h6>
-                                                    <div className="table-responsive border rounded-3">
-                                                        <Table hover className="m-0 align-middle small">
-                                                            <thead className="bg-light">
-                                                                <tr>
-                                                                    <th className="px-3 py-2">Item</th>
-                                                                    <th className="px-3 py-2 text-end">Qty</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {selectedBooking.selectedAddons.map((addon, idx) => (
-                                                                    <tr key={idx}>
-                                                                        <td className="px-3 py-2 fw-bold">{addon.itemName}</td>
-                                                                        <td className="px-3 py-2 text-end">{addon.quantity}</td>
+                                                {selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 && (
+                                                    <Col md={selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 ? 6 : 12}>
+                                                        <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Addons / Goodies</h6>
+                                                        <div className="table-responsive border rounded-3">
+                                                            <Table hover className="m-0 align-middle small">
+                                                                <thead className="bg-light">
+                                                                    <tr>
+                                                                        <th className="px-3 py-2">Item</th>
+                                                                        <th className="px-3 py-2 text-end">Qty</th>
                                                                     </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </Table>
-                                                    </div>
-                                                </Col>
-                                            )}
-                                        </Row>
-                                    </div>
-                                )}
+                                                                </thead>
+                                                                <tbody>
+                                                                    {selectedBooking.selectedAddons.map((addon, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td className="px-3 py-2 fw-bold">{addon.itemName}</td>
+                                                                            <td className="px-3 py-2 text-end">{addon.quantity}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </Table>
+                                                        </div>
+                                                    </Col>
+                                                )}
+                                            </Row>
+                                        </div>
+                                    )}
 
                                 {/* Section 5: Financial Summary */}
                                 <div className="border-top pt-4 mb-2">

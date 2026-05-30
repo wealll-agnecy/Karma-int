@@ -4,19 +4,25 @@ import { Container, Row, Col, Card, Button, Badge, Table, Spinner } from 'react-
 import {
     FaWallet, FaUsers, FaTicketAlt, FaShieldAlt, FaEye, FaCheck, FaTimes,
     FaCalendarCheck, FaShoppingBag, FaBolt, FaChevronRight, FaChartLine,
-    FaEllipsisV, FaCheckCircle
+    FaEllipsisV, FaCheckCircle, FaTrash
 } from 'react-icons/fa';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import StatsCard from '../components/analytics/StatsCard';
 import DashboardSkeleton from '../components/analytics/DashboardSkeleton';
-import { RevenueChart, CategoryPerformanceChart } from '../components/analytics/DashboardCharts';
 import { Link } from 'react-router-dom';
 import * as analyticsApi from '../api/analyticsApi';
-import * as expenseApi from '../api/expenseApi';
 import toast from 'react-hot-toast';
-import { FaTrash, FaPlus, FaMoneyBillWave, FaChartPie } from 'react-icons/fa';
 import '../css/dashboard.css';
 import '../css/global.css';
 import { formatCurrency } from '../utils/formatUtils';
+
+const chartData = [
+    { name: 'Jan', value: 38000 },
+    { name: 'Feb', value: 42000 },
+    
+    { name: 'Mar', value: 39000 },
+    { name: 'Apr', value: 85000 },
+];
 
 
 
@@ -33,27 +39,17 @@ const AdminDashboard = () => {
         expenses: 0,
         activities: []
     });
-    const [profitSummary, setProfitSummary] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, margin: 0 });
-    const [expenses, setExpenses] = useState([]);
-    const [actionLoading, setActionLoading] = useState({});
-    const [expenseLoading, setExpenseLoading] = useState(false);
     const [loading, setLoading] = useState(true);
-
-    // New Expense Form State
-    const [newExpense, setNewExpense] = useState({ title: '', amount: '', category: 'Other' });
 
 
     const fetchDashboardData = async () => {
         try {
             // Fetch core intelligence data consolidated
-            const [adminStatsRes, orgRequestsRes, summaryRes, expensesRes] = await Promise.all([
-                adminApi.getAdminStats(),
-                expenseApi.getProfitSummary().catch(() => ({ data: { data: {} } })),
-                expenseApi.getExpenses().catch(() => ({ data: { data: [] } }))
+            const [adminStatsRes] = await Promise.all([
+                adminApi.getAdminStats()
             ]);
 
             const adminData = adminStatsRes.data.data;
-            const summary = summaryRes.data.data;
 
             setLiveStats({
                 revenue: adminData.totalRevenue || 0,
@@ -63,11 +59,8 @@ const AdminDashboard = () => {
                 ticketsSold: adminData.totalTicketsSold || 0,
                 profit: adminData.totalProfit || 0,
                 totalEnquiries: adminData.totalEnquiries || 0,
-                expenses: summary.totalExpenses || 0,
                 activities: adminData.activities || []
             });
-            setProfitSummary(summary);
-            setExpenses(expensesRes.data.data);
 
         } catch (err) {
             console.error('Critical Console Sync Failure:', err);
@@ -79,32 +72,6 @@ const AdminDashboard = () => {
     useEffect(() => {
         fetchDashboardData();
     }, []);
-
-    const handleAddExpense = async (e) => {
-        e.preventDefault();
-        setExpenseLoading(true);
-        try {
-            await expenseApi.addExpense(newExpense);
-            toast.success('Fiscal record added to ledger');
-            setNewExpense({ title: '', amount: '', category: 'Other' });
-            fetchDashboardData();
-        } catch (err) {
-            toast.error('Financial indexing failure');
-        } finally {
-            setExpenseLoading(false);
-        }
-    };
-
-    const handleDeleteExpense = async (id) => {
-        if (!window.confirm('Authorize deletion of this fiscal record?')) return;
-        try {
-            await expenseApi.deleteExpense(id);
-            toast.success('Record purged');
-            fetchDashboardData();
-        } catch (err) {
-            toast.error('Deletion error');
-        }
-    };
 
 
 
@@ -166,98 +133,98 @@ const AdminDashboard = () => {
                     </Link>
                 </div>
 
-                {/* ─── Primary Intelligence ─── */}
-                <Row className="g-4 mb-4">
-                    <Col lg={4}>
-                        <div className="dashboard-card highlight-card d-flex flex-column justify-content-between">
-                            <div>
-                                <span className="card-title-sm opacity-75">Net Profit</span>
-                                <h2 className="card-value-lg my-2">
-                                    {formatCurrency(liveStats?.profit || liveStats?.netProfit)}
-                                </h2>
-                                <p className="small opacity-75 m-0 mb-4">Master Calculation</p>
-                            </div>
-                            <div className="pt-4 border-top border-white/20">
+
+
+                {/* â”€â”€â”€ Core Intelligence Panels â”€â”€â”€ */}
+                <Row className="mb-4">
+                    {/* â”€â”€â”€ Left Column â”€â”€â”€ */}
+                    <Col lg={4} className="d-flex flex-column gap-4">
+                        {/* Net Profit */}
+                        <div className="dashboard-card d-flex flex-column justify-content-center">
+                            <span className="card-title-sm mb-3">Net Profit</span>
+                            <h2 className="fw-bold mb-4" style={{ fontSize: '2.5rem', letterSpacing: '-0.04em' }}>
+                                {formatCurrency(liveStats.profit || 0)}
+                            </h2>
+                            <div className="mt-2 text-slate small fw-bold">Master Calculation</div>
+                            <div className="mt-4 pt-3 border-top">
                                 <div className="d-flex justify-content-between mb-2">
-                                    <span className="small opacity-80">Gross Volume:</span>
-                                    <span className="fw-bold">{formatCurrency(liveStats?.revenue)}</span>
+                                    <span className="small text-slate">Gross Volume</span>
+                                    <span className="small fw-bold">{formatCurrency(liveStats.revenue || 0)}</span>
                                 </div>
                                 <div className="d-flex justify-content-between">
-                                    <span className="small opacity-80">Operational Leak:</span>
-                                    <span className="fw-bold">-{formatCurrency(liveStats?.expenses)}</span>
+                                    <span className="small text-slate">Operational Loss</span>
+                                    <span className="small fw-bold text-danger">-{formatCurrency((liveStats.revenue || 0) - (liveStats.profit || 0))}</span>
                                 </div>
                             </div>
                         </div>
-                    </Col>
 
-                    <Col lg={8}>
-                        <div className="dashboard-card">
-                            <div className="d-flex justify-content-between align-items-center mb-4">
-                                <h5 className="dashboard-title-main" style={{ fontSize: '1.25rem' }}>Add Expenses</h5>
-                                <span className="status-badge">{expenses.length} Entries</span>
+                        {/* Identity Moderation */}
+                        <div className="dashboard-card text-center d-flex flex-column justify-content-center align-items-center py-5">
+                            <span className="card-title-sm align-self-start w-100 text-start mb-4">Identity Moderation</span>
+                            <div className="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '40px', height: '40px' }}>
+                                <FaCheck className="text-white" />
                             </div>
-
-                            <div className="data-list audit-feed-scroll overflow-auto mb-4" style={{ maxHeight: '280px', paddingRight: '5px' }}>
-                                {expenses.length === 0 ? (
-                                    <div className="text-center py-5 text-slate opacity-50 small">No transactions recorded.</div>
-                                ) : (
-                                    expenses.map(exp => (
-                                        <div key={exp._id} className="data-item">
-                                            <div className="data-left">
-                                                <h6>{exp.title}</h6>
-                                                <p>{exp.category || 'General'}</p>
-                                            </div>
-                                            <div className="d-flex align-items-center gap-4">
-                                                <span className="fw-bold text-danger">{formatCurrency(exp.amount)}</span>
-                                                <button onClick={() => handleDeleteExpense(exp._id)} className="btn btn-link p-0 text-slate hover-text-danger transition-all">
-                                                    <FaTrash size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            <form onSubmit={handleAddExpense} className="row g-2 pt-3 border-top">
-                                <div className="col-md-5">
-                                    <input type="text" className="form-control rounded-8 border-slate-200" placeholder="Description" required value={newExpense.title} onChange={e => setNewExpense({ ...newExpense, title: e.target.value })} />
-                                </div>
-                                <div className="col-md-2">
-                                    <input type="number" className="form-control rounded-8 border-slate-200" placeholder="Amount" required value={newExpense.amount} onChange={e => setNewExpense({ ...newExpense, amount: e.target.value })} />
-                                </div>
-                                <div className="col-md-3">
-                                    <select className="form-select rounded-8 border-slate-200" value={newExpense.category} onChange={e => setNewExpense({ ...newExpense, category: e.target.value })}>
-                                        <option value="Server">Server</option>
-                                        <option value="Marketing">Marketing</option>
-                                        <option value="Staff">Staff</option>
-                                        <option value="Infrastructure">Infrastructure</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div className="col-md-2">
-                                    <button type="submit" className="btn btn-pink w-100 fw-bold py-2" disabled={expenseLoading}>
-                                        {expenseLoading ? <Spinner size="sm" /> : 'Add'}
-                                    </button>
-                                </div>
-                            </form>
+                            <p className="text-slate small fw-bold m-0">No pending requests</p>
                         </div>
                     </Col>
-                </Row>
 
-                <Row className="g-4 mb-4">
-                    <Col lg={12}>
+                    {/* â”€â”€â”€ Right Column â”€â”€â”€ */}
+                    <Col lg={8} className="d-flex flex-column gap-4">
+                        {/* Add Expenses */}
                         <div className="dashboard-card">
                             <div className="d-flex justify-content-between align-items-center mb-4">
-                                <h5 className="dashboard-title-main" style={{ fontSize: '1.25rem' }}>Revenue Intelligence</h5>
-                                <span className="status-badge badge-pink">Real-time</span>
+                                <span className="card-title-sm m-0">Add Expenses</span>
+                                <Badge bg="light" text="dark" className="border text-uppercase" style={{ fontSize: '0.65rem' }}>finance</Badge>
                             </div>
-                            <div style={{ height: '340px' }}>
-                                <RevenueChart data={[
-                                    { name: 'Jan', revenue: 45000 },
-                                    { name: 'Feb', revenue: 52000 },
-                                    { name: 'Mar', revenue: 48000 },
-                                    { name: 'Apr', revenue: currentRevenue },
-                                ]} />
+                            
+                            <div className="d-flex justify-content-between align-items-center p-3 rounded mb-3" style={{ border: '1px solid #f1f5f9' }}>
+                                 <div>
+                                     <div className="small fw-bold">Foods</div>
+                                     <div className="text-slate" style={{ fontSize: '0.7rem' }}>Other</div>
+                                 </div>
+                                 <div className="d-flex align-items-center gap-3">
+                                     <span className="fw-bold text-danger">â‚¹5,000</span>
+                                     <div className="bg-primary rounded p-1 d-flex align-items-center justify-content-center" style={{ width: '24px', height: '24px', cursor: 'pointer' }}>
+                                         <FaTrash className="text-white" size={10} /> 
+                                     </div>
+                                 </div>
+                            </div>
+
+                            <div className="d-flex gap-2 align-items-center mt-3">
+                                <input type="text" className="form-control form-control-sm" placeholder="Description" style={{ flex: 2, padding: '8px 12px' }} />
+                                <input type="number" className="form-control form-control-sm" placeholder="Amount" style={{ flex: 1, padding: '8px 12px' }} />
+                                <select className="form-select form-select-sm" style={{ flex: 1, padding: '8px 12px' }}>
+                                    <option>Other</option>
+                                    <option>Foods</option>
+                                </select>
+                                <Button variant="primary" size="sm" className="px-4 py-2 rounded-pill fw-bold" style={{ background: '#d946ef', border: 'none', fontSize: '0.75rem' }}>ADD</Button>
+                            </div>
+                        </div>
+
+                        {/* Revenue Intelligence */}
+                        <div className="dashboard-card">
+                            <div className="d-flex justify-content-between align-items-center mb-4">
+                                <span className="card-title-sm m-0">Revenue Intelligence</span>
+                                <Badge bg="light" text="dark" className="border text-uppercase" style={{ fontSize: '0.65rem' }}>real time</Badge>
+                            </div>
+                            <div style={{ width: '100%', height: '220px' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={chartData}>
+                                        <defs>
+                                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dx={-10} />
+                                        <Tooltip 
+                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                            itemStyle={{ color: '#8b5cf6', fontWeight: 'bold' }}
+                                        />
+                                        <Area type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
                             </div>
                         </div>
                     </Col>

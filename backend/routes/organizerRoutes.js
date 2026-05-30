@@ -3,13 +3,20 @@ const {
     getStaff,
     createStaff,
     assignStaffToEvents,
-    deleteStaff
+    deleteStaff,
+    reassignStaffRole
 } = require('../controllers/staffController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 const Ticket = require('../models/Ticket');
 const Expense = require('../models/Expense');
 const Event = require('../models/Event');
+
+const {
+    getAddons,
+    createAddon,
+    deleteAddon
+} = require('../controllers/organizerController');
 
 const router = express.Router();
 
@@ -74,6 +81,57 @@ router.get('/bookings', authorize('organizer', 'staff'), async (req, res) => {
     }
 });
 
+// --- LEADS ROUTE ---
+router.get('/leads', authorize('organizer', 'staff'), async (req, res) => {
+    try {
+        const Booking = require('../models/Booking');
+        const organizerId = req.user.id || req.user._id;
+        const allEvents = await Event.find({ organizer: organizerId }).select('_id').lean();
+        const eventIds = allEvents.map(e => e._id);
+        
+        const leads = await Booking.find({ 
+            event: { $in: eventIds },
+            paymentStatus: { $in: ['pending', 'partial'] }
+        })
+        .populate('user', 'name email phone')
+        .populate('event', 'title')
+        .sort({ createdAt: -1 })
+        .lean();
+
+        res.status(200).json({ success: true, count: leads.length, leads });
+    } catch (err) {
+        console.error("Leads API Error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+router.put('/leads/:id', authorize('organizer', 'staff'), async (req, res) => {
+    try {
+        const Booking = require('../models/Booking');
+        const { leadStatus, followupDate, note } = req.body;
+        
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ success: false, message: "Lead not found" });
+
+        if (leadStatus) booking.leadStatus = leadStatus;
+        if (followupDate) booking.followupDate = followupDate;
+        
+        if (note) {
+            booking.leadNotes.push({
+                note,
+                statusAtTime: leadStatus || booking.leadStatus,
+                date: new Date()
+            });
+        }
+        
+        await booking.save();
+        res.status(200).json({ success: true, message: "Lead updated successfully", data: booking });
+    } catch (err) {
+        console.error("Update Lead API Error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // --- STAFF-ONLY ROUTES (Accessible to Staff Members) ---
 
 // --- ROUTES ACCESSIBLE ONLY BY ORGANIZER ---
@@ -87,7 +145,43 @@ router.route('/staff')
 router.route('/staff/:id')
     .delete(deleteStaff);
 
+router.put('/staff/:id/role', reassignStaffRole);
 
+// Addons Management
+router.route('/addons')
+    .get(getAddons)
+    .post(createAddon);
+
+router.delete('/addons/:name', deleteAddon);
+
+// =========================
+// EVENT LANDING PAGE CMS
+// =========================
+router.put('/events/:id/landing-page', async (req, res) => {
+    try {
+        const organizerId = req.user.id || req.user._id;
+        const eventId = req.params.id;
+        
+        const event = await Event.findOne({ _id: eventId, organizer: organizerId });
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found or unauthorized' });
+        }
+
+        // Merge incoming config with existing (or overwrite)
+        if (req.body.landingPageConfig) {
+            event.landingPageConfig = {
+                ...event.landingPageConfig,
+                ...req.body.landingPageConfig
+            };
+            await event.save();
+        }
+
+        res.status(200).json({ success: true, message: 'Landing page updated successfully', data: event.landingPageConfig });
+    } catch (err) {
+        console.error("Update Landing Page Error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 router.get("/event/:id/details", async (req, res) => {
   try {

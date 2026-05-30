@@ -11,7 +11,7 @@
 }
 
 .dashboard-container {
-  padding-top: 10px !important;
+  padding-top: 0px !important;
 }
 
 /* HEADER */
@@ -328,77 +328,85 @@
 
 /* PAYMENT PROGRESS BAR FIX */
 .payment-progress-wrapper {
-    width: 100%;
-    margin-top: 6px;
+  width: 100%;
+  margin-top: 6px;
 }
 
 .payment-progress-track {
-    width: 100%;
-    height: 8px;
-    background: #ececec;
-    border-radius: 999px;
-    overflow: hidden;
-    position: relative;
+  width: 100%;
+  height: 8px;
+  background: #ececec;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
 }
 
 .payment-progress-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 0.4s ease;
-    background: linear-gradient(90deg, #ff6cab, #7366ff);
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+  background: linear-gradient(90deg, #ff6cab, #7366ff);
 }
 
 /* Full paid state */
 .payment-progress-fill.full {
-    width: 100% !important;
+  width: 100% !important;
 }
 
 /* Partial payment state */
 .payment-progress-fill.partial {
-    background: linear-gradient(90deg, #ff9f43, #ff6b6b);
+  background: linear-gradient(90deg, #ff9f43, #ff6b6b);
 }
 
 /* --- Mobile/Tablet Audit Feed Text Wrapping Fix --- */
 @media (max-width: 1024px) {
-    .audit-feed-type {
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-    }
-    .data-item .data-left {
-        min-width: 0 !important;
-        flex: 1 !important;
-        padding-right: 15px !important;
-    }
-    .custom-premium-table th,
-    .custom-premium-table td {
-        min-width: 140px !important;
-        white-space: nowrap !important;
-    }
-    .custom-premium-table th:first-child,
-    .custom-premium-table td:first-child {
-        min-width: 200px !important;
-    }
+  .audit-feed-type {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
 
-    /* --- Mobile/Tablet Event Guest Stat Cards Rearrange & Compress --- */
-    .attendee-stat-card {
-        padding: 12px !important;
-    }
-    .attendee-stat-card .d-flex {
-        gap: 8px !important;
-    }
-    .attendee-stat-card .icon-box-premium {
-        width: 36px !important;
-        height: 36px !important;
-        min-width: 36px !important;
-    }
-    .attendee-stat-card .icon-box-premium svg {
-        font-size: 14px !important;
-    }
-    .attendee-stat-card h6.tiny-text {
-        font-size: 0.65rem !important;
-        margin-bottom: 2px !important;
-    }
-    .attendee-stat-card h5 {
-        font-size: 1.1rem !important;
-    }
+  .data-item .data-left {
+    min-width: 0 !important;
+    flex: 1 !important;
+    padding-right: 15px !important;
+  }
+
+  .custom-premium-table th,
+  .custom-premium-table td {
+    min-width: 140px !important;
+    white-space: nowrap !important;
+  }
+
+  .custom-premium-table th:first-child,
+  .custom-premium-table td:first-child {
+    min-width: 200px !important;
+  }
+
+  /* --- Mobile/Tablet Event Guest Stat Cards Rearrange & Compress --- */
+  .attendee-stat-card {
+    padding: 12px !important;
+  }
+
+  .attendee-stat-card .d-flex {
+    gap: 8px !important;
+  }
+
+  .attendee-stat-card .icon-box-premium {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+  }
+
+  .attendee-stat-card .icon-box-premium svg {
+    font-size: 14px !important;
+  }
+
+  .attendee-stat-card h6.tiny-text {
+    font-size: 0.65rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  .attendee-stat-card h5 {
+    font-size: 1.1rem !important;
+  }
 }

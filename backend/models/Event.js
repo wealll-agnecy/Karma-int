@@ -228,6 +228,47 @@ const EventSchema = new mongoose.Schema({
             of: mongoose.Schema.ObjectId,
             default: {}
         }
+    },
+
+    // =========================
+    // LANDING PAGE CMS CONFIG
+    // =========================
+    landingPageConfig: {
+        hero: {
+            title: { type: String, default: '' },
+            subtitle: { type: String, default: '' },
+            description: { type: String, default: '' },
+            buttonText: { type: String, default: 'Get Tickets' },
+            bannerImage: { type: String, default: '' },
+            videoUrl: { type: String, default: '' }
+        },
+        theme: {
+            primaryColor: { type: String, default: '#e91e63' },
+            fontFamily: { type: String, default: 'Inter, sans-serif' }
+        },
+        sections: {
+            speakers: { 
+                isVisible: { type: Boolean, default: true }, 
+                items: [{ name: String, role: String, company: String, image: String, bio: String }] 
+            },
+            schedule: { 
+                isVisible: { type: Boolean, default: true }, 
+                items: [{ time: String, title: String, description: String }] 
+            },
+            faq: { 
+                isVisible: { type: Boolean, default: true }, 
+                items: [{ question: String, answer: String }] 
+            },
+            testimonials: { 
+                isVisible: { type: Boolean, default: true }, 
+                items: [{ name: String, text: String, role: String, image: String }] 
+            }
+        },
+        seo: {
+            metaTitle: { type: String, default: '' },
+            metaDescription: { type: String, default: '' },
+            keywords: { type: String, default: '' }
+        }
     }
 });
 

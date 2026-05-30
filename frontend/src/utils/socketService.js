@@ -55,6 +55,8 @@ class FirebaseRealtimeService {
         this.startedAt = null;
         this.seenRealtimeIds = new Set();
         this.warnedMissingConfig = false;
+        this.reconnectTimeout = null;
+        this.reconnectAttempts = 0;
     }
 
     connect(userId) {
@@ -77,6 +79,11 @@ class FirebaseRealtimeService {
         const clients = this.getFirebaseClients();
         if (!clients || !this.userId) return;
 
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+
         try {
             await this.ensureFirebaseAuth(clients.auth);
             if (!this.userId) return;
@@ -84,9 +91,24 @@ class FirebaseRealtimeService {
             this.listenToUserNotifications(clients.db);
             this.listenToBroadcasts(clients.db);
             this.emit('connect');
+            this.reconnectAttempts = 0;
         } catch (err) {
             console.error('[FIREBASE REALTIME] Listener initialization failed:', err.message);
             this.emit('disconnect', err);
+
+            // Reconnection retry logic with exponential backoff (max 5 retries)
+            if (this.userId) {
+                this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
+                if (this.reconnectAttempts <= 5) {
+                    const delay = Math.min(5000 * Math.pow(1.5, this.reconnectAttempts - 1), 30000);
+                    console.log(`[FIREBASE REALTIME] Retrying connection in ${Math.round(delay / 1000)} seconds... (Attempt ${this.reconnectAttempts}/5)`);
+                    this.reconnectTimeout = setTimeout(() => {
+                        this.initializeListeners();
+                    }, delay);
+                } else {
+                    console.error('[FIREBASE REALTIME] Max reconnection attempts reached. Halting retries. Ensure your backend provides a valid token.');
+                }
+            }
         }
     }
 
@@ -226,19 +248,51 @@ class FirebaseRealtimeService {
         return this;
     }
 
-    listenToTicket(eventId, ticketId, callback) {
+    async ensureAuthReady() {
         const clients = this.getFirebaseClients();
-        if (!clients || !eventId || !ticketId) return null;
+        if (!clients) throw new Error('Firebase configuration missing');
+        await this.ensureFirebaseAuth(clients.auth);
+        return clients.db;
+    }
 
-        const ticketRef = doc(clients.db, 'events', eventId.toString(), 'tickets', ticketId.toString());
-        return onSnapshot(ticketRef, (snapshot) => {
-            if (snapshot.exists()) {
-                callback(snapshot.data());
+    listenToTicket(eventId, ticketId, callback) {
+        let unsubscribe = null;
+        let isCancelled = false;
+
+        this.ensureAuthReady()
+            .then((db) => {
+                if (isCancelled) return;
+                const ticketRef = doc(db, 'events', eventId.toString(), 'tickets', ticketId.toString());
+                unsubscribe = onSnapshot(
+                    ticketRef,
+                    (snapshot) => {
+                        if (snapshot.exists()) {
+                            callback(snapshot.data());
+                        }
+                    },
+                    (err) => {
+                        console.error('[FIREBASE REALTIME] Ticket snapshot error:', err.message);
+                    }
+                );
+            })
+            .catch((err) => {
+                console.error('[FIREBASE REALTIME] Could not listen to ticket because authentication failed:', err.message);
+            });
+
+        return () => {
+            isCancelled = true;
+            if (unsubscribe) {
+                unsubscribe();
             }
-        });
+        };
     }
 
     closeSubscriptions() {
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+
         if (this.userUnsubscribe) {
             this.userUnsubscribe();
             this.userUnsubscribe = null;

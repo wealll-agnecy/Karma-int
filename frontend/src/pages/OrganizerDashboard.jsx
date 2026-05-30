@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Button, Table, Spinner, Badge, Modal, Form }
 import { Link } from 'react-router-dom';
 import * as eventApi from '../api/eventApi';
 import * as analyticsApi from '../api/analyticsApi';
+import apiClient from '../api/apiClient';
 import { RevenueChart, TicketDistributionChart } from '../components/analytics/DashboardCharts';
 import DashboardSkeleton from '../components/analytics/DashboardSkeleton';
 
@@ -12,6 +13,7 @@ import {
 import '../css/dashboard.css';
 import '../css/global.css';
 import { formatCurrency } from '../utils/formatUtils';
+import EventLandingEditor from '../components/events/EventLandingEditor';
 
 
 const OrganizerDashboard = () => {
@@ -19,6 +21,12 @@ const OrganizerDashboard = () => {
     const [revenueData, setRevenueData] = useState({ totalRevenue: 0, totalEvents: 0 });
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [editorOpen, setEditorOpen] = useState(false);
+    const [selectedEventToEdit, setSelectedEventToEdit] = useState(null);
+
+    // Calculator states
+    const [calcRevenue, setCalcRevenue] = useState('');
+    const [calcExpenses, setCalcExpenses] = useState('');
 
 
     const fetchData = async () => {
@@ -62,6 +70,9 @@ const OrganizerDashboard = () => {
 
     const netProfit = revenueData?.totalRevenue || 0;
 
+    const calculatedProfit = (Number(calcRevenue) || 0) - (Number(calcExpenses) || 0);
+    const isLoss = calculatedProfit < 0;
+
     const calculateDays = (start, end) => {
         if (!start || !end) return 1;
         const diff = new Date(end) - new Date(start);
@@ -72,7 +83,7 @@ const OrganizerDashboard = () => {
         <div className="dashboard-page" style={{ background: 'linear-gradient(135deg, #fff0f5 0%, #f3e8ff 100%)' }}>
             <Container fluid className="px-md-5">
                 {/* ─── Header ─── */}
-                <div className="dashboard-header d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
+                <div className="dashboard-header mt-5 d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
                     <div>
                         <h2 className="dashboard-title-main">Dashboard</h2>
                         <p className="dashboard-subtext">Manage your events, view analytics, and control your enterprise.</p>
@@ -128,6 +139,66 @@ const OrganizerDashboard = () => {
                         </div>
                     </Col>
 
+                    {/* Right: Profit & Loss Calculator */}
+                    <Col lg={8}>
+                        <div className="dashboard-card h-100 d-flex flex-column">
+                            <div className="d-flex justify-content-between align-items-center mb-4">
+                                <h5 className="dashboard-title-main" style={{ fontSize: '1.25rem' }}>Profit & Loss Calculator</h5>
+                                <Badge bg="light" text="dark" className="border text-uppercase" style={{ fontSize: '0.65rem' }}>tools</Badge>
+                            </div>
+
+                            <Row className="g-4 mb-4">
+                                <Col md={6}>
+                                    <Form.Group>
+                                        <Form.Label className="small fw-bold text-slate mb-2">Expected Revenue</Form.Label>
+                                        <div className="input-group">
+                                            <span className="input-group-text bg-light border-end-0 text-muted">₹</span>
+                                            <Form.Control
+                                                type="number"
+                                                placeholder="0.00"
+                                                value={calcRevenue}
+                                                onChange={(e) => setCalcRevenue(e.target.value)}
+                                                className="border-start-0 ps-0 shadow-none"
+                                            />
+                                        </div>
+                                    </Form.Group>
+                                </Col>
+                                <Col md={6}>
+                                    <Form.Group>
+                                        <Form.Label className="small fw-bold text-slate mb-2">Estimated Expenses</Form.Label>
+                                        <div className="input-group">
+                                            <span className="input-group-text bg-light border-end-0 text-muted">₹</span>
+                                            <Form.Control
+                                                type="number"
+                                                placeholder="0.00"
+                                                value={calcExpenses}
+                                                onChange={(e) => setCalcExpenses(e.target.value)}
+                                                className="border-start-0 ps-0 shadow-none"
+                                            />
+                                        </div>
+                                    </Form.Group>
+                                </Col>
+                            </Row>
+
+                            <div
+                                className="mt-auto p-4 rounded-4 d-flex justify-content-between align-items-center"
+                                style={{
+                                    backgroundColor: isLoss ? '#fee2e2' : '#f0fdf4',
+                                    border: `1px solid ${isLoss ? '#fca5a5' : '#bbf7d0'}`
+                                }}
+                            >
+                                <div>
+                                    <h6 className="m-0 mb-1 fw-bold" style={{ color: isLoss ? '#b91c1c' : '#15803d' }}>
+                                        {isLoss ? 'Projected Loss' : 'Projected Profit'}
+                                    </h6>
+                                    <span className="small" style={{ color: isLoss ? '#ef4444' : '#22c55e' }}>Based on your inputs</span>
+                                </div>
+                                <h3 className="m-0 fw-bold" style={{ color: isLoss ? '#b91c1c' : '#15803d', fontSize: '1.75rem' }}>
+                                    {isLoss ? '-' : '+'}{formatCurrency(Math.abs(calculatedProfit))}
+                                </h3>
+                            </div>
+                        </div>
+                    </Col>
                 </Row>
 
 
@@ -156,8 +227,15 @@ const OrganizerDashboard = () => {
 
                                                 <td className="text-end px-4 py-3">
                                                     <div className="d-flex justify-content-end gap-2">
-                                                        <Button as={Link} to={`/organizer/event/${ev._id}`} className="btn btn-outline-pink shadow-none p-2">
+                                                        <Button as={Link} to={`/organizer/event/${ev._id}`} className="btn btn-outline-pink shadow-none p-2" title="View Event Details">
                                                             <FaEye className="text-slate" />
+                                                        </Button>
+                                                        <Button 
+                                                            onClick={(e) => { e.preventDefault(); setSelectedEventToEdit(ev); setEditorOpen(true); }} 
+                                                            className="btn btn-pink shadow-none p-2" 
+                                                            title="Edit Landing Page"
+                                                        >
+                                                            <FaEdit className="text-white" />
                                                         </Button>
                                                     </div>
                                                 </td>
@@ -190,6 +268,15 @@ const OrganizerDashboard = () => {
                         </div>
                     </Col>
                 </Row>
+
+                {editorOpen && selectedEventToEdit && (
+                    <EventLandingEditor 
+                        show={editorOpen} 
+                        onHide={() => { setEditorOpen(false); setSelectedEventToEdit(null); }} 
+                        event={selectedEventToEdit} 
+                        onSaveSuccess={fetchData}
+                    />
+                )}
 
             </Container>
         </div>
