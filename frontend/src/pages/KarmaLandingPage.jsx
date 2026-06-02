@@ -439,15 +439,6 @@ const KarmaLandingPage = () => {
                                             </svg>
                                             A Customised Trophy
                                         </li>
-                                        <li>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
-                                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                            </svg>
-                                            Selfie with the Jasmine Beauty Care Team
-                                        </li>
 
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
@@ -456,7 +447,7 @@ const KarmaLandingPage = () => {
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
-                                            Add Selfie and Photo with the Jasmine Beauty Care Team
+                                            Selfie and Photo with the Jasmine Beauty Care Team
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
@@ -524,7 +515,7 @@ const KarmaLandingPage = () => {
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
-                                            Add Selfie and Photo with the Entire Team Promotional Video shared
+                                            Selfie and Photo with the Entire Team Promotional Video shared
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
@@ -560,16 +551,16 @@ const KarmaLandingPage = () => {
                                     <div className="ticket-stub">
                                         <span className="stub-label">Bonus Pass</span>
                                         <div className="stub-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21 v-2 a4 4 0 0 0 -4 -4 H6 a4 4 0 0 0 -4 4 v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21 v-2 a4 4 0 0 0 -3 -3.87"></path><path d="M16 3.13 a4 4 0 0 1 0 7.75"></path></svg>
+                                            <div className="stub-num">01</div>
                                         </div>
-                                        <div className="stub-num">01</div>
-                                        <div className="stub-num-label">Bonus</div>
+
+                                        {/* <div className="stub-num-label">Bonus</div> */}
                                     </div>
                                     <div className="ticket-main">
 
                                         <div className="ticket-text-content">
                                             <h3 className="ticket-title"> Learn the latest Trending Makeup Looks & Signature Hairstyles </h3>
-                                            <p className="ticket-sub">to VIP community</p>
+
                                         </div>
 
                                     </div>
@@ -586,16 +577,15 @@ const KarmaLandingPage = () => {
                                     <div className="ticket-stub">
                                         <span className="stub-label">Bonus Pass</span>
                                         <div className="stub-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3 H8 a2 2 0 0 1 2 2 V19 a2 2 0 0 0 2 2 2 2 0 0 0 2 -2 V5 a2 2 0 0 1 2 -2 H22"></path><path d="M4 6 H8"></path><path d="M4 10 H8"></path><path d="M16 6 H20"></path><path d="M16 10 H20"></path></svg>
+                                            <div className="stub-num">02</div>
                                         </div>
-                                        <div className="stub-num">02</div>
-                                        <div className="stub-num-label">Bonus</div>
+
+                                        {/* <div className="stub-num-label">Bonus</div> */}
                                     </div>
                                     <div className="ticket-main">
 
                                         <div className="ticket-text-content">
                                             <h3 className="ticket-title">In-depth knowledge of Drugstore & Luxury/High-End Products</h3>
-                                            <p className="ticket-sub">Manage employees effortlessly & streamline your work.</p>
                                         </div>
 
                                     </div>
@@ -612,16 +602,15 @@ const KarmaLandingPage = () => {
                                     <div className="ticket-stub">
                                         <span className="stub-label">Bonus Pass</span>
                                         <div className="stub-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3 H8 a2 2 0 0 1 2 2 V19 a2 2 0 0 0 2 2 2 2 0 0 0 2 -2 V5 a2 2 0 0 1 2 -2 H22"></path><path d="M4 6 H8"></path><path d="M4 10 H8"></path><path d="M16 6 H20"></path><path d="M16 10 H20"></path></svg>
+                                            <div className="stub-num">03</div>
                                         </div>
-                                        <div className="stub-num">03</div>
-                                        <div className="stub-num-label">Bonus</div>
+
+                                        {/* <div className="stub-num-label">Bonus</div> */}
                                     </div>
                                     <div className="ticket-main">
 
                                         <div className="ticket-text-content">
                                             <h3 className="ticket-title">Professional Hands-On Practice Sessions</h3>
-                                            <p className="ticket-sub">Turbocharge business growth with proven sales systems.</p>
                                         </div>
 
                                     </div>
@@ -638,16 +627,15 @@ const KarmaLandingPage = () => {
                                     <div className="ticket-stub">
                                         <span className="stub-label">Bonus Pass</span>
                                         <div className="stub-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3 H8 a2 2 0 0 1 2 2 V19 a2 2 0 0 0 2 2 2 2 0 0 0 2 -2 V5 a2 2 0 0 1 2 -2 H22"></path><path d="M4 6 H8"></path><path d="M4 10 H8"></path><path d="M16 6 H20"></path><path d="M16 10 H20"></path></svg>
+                                            <div className="stub-num">04</div>
                                         </div>
-                                        <div className="stub-num">04</div>
-                                        <div className="stub-num-label">Bonus</div>
+
+                                        {/* <div className="stub-num-label">Bonus</div> */}
                                     </div>
                                     <div className="ticket-main">
 
                                         <div className="ticket-text-content">
                                             <h3 className="ticket-title">Understanding of Product Selection for Different Skin Types & Textures </h3>
-                                            <p className="ticket-sub">Improve business growth & profits through finance mastery.</p>
                                         </div>
 
                                     </div>
@@ -664,16 +652,16 @@ const KarmaLandingPage = () => {
                                     <div className="ticket-stub">
                                         <span className="stub-label">Bonus Pass</span>
                                         <div className="stub-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3 H8 a2 2 0 0 1 2 2 V19 a2 2 0 0 0 2 2 2 2 0 0 0 2 -2 V5 a2 2 0 0 1 2 -2 H22"></path><path d="M4 6 H8"></path><path d="M4 10 H8"></path><path d="M16 6 H20"></path><path d="M16 10 H20"></path></svg>
+                                            <div className="stub-num">05</div>
                                         </div>
-                                        <div className="stub-num">05</div>
-                                        <div className="stub-num-label">Bonus</div>
+
+                                        {/* <div className="stub-num-label">Bonus</div> */}
                                     </div>
                                     <div className="ticket-main">
 
                                         <div className="ticket-text-content">
                                             <h3 className="ticket-title">Tips & Techniques for Bridal, Glam & Editorial Finishes</h3>
-                                            <p className="ticket-sub">Step-by-step process to run your business like a CEO.</p>
+
                                         </div>
 
                                     </div>
@@ -688,18 +676,17 @@ const KarmaLandingPage = () => {
                                     <span className="notch notch-l"></span>
                                     <span className="notch notch-r"></span>
                                     <div className="ticket-stub">
-
+                                        <span className="stub-label">Bonus Pass</span>
                                         <div className="stub-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                            <div className="stub-num">06</div>
                                         </div>
-                                        <div className="stub-num">06</div>
-                                        <div className="stub-num-label">Bonus</div>
+
+                                        {/* <div className="stub-num-label">Bonus</div> */}
                                     </div>
                                     <div className="ticket-main">
 
                                         <div className="ticket-text-content">
                                             <h3 className="ticket-title">Guidance on Client Handling & Professional Presentation </h3>
-                                            <p className="ticket-sub">attend future sessions</p>
                                         </div>
 
                                     </div>
@@ -1031,7 +1018,6 @@ const KarmaLandingPage = () => {
                 <div className="sticky-cta-container">
                     <div className="sticky-cta-text">
                         <h4 className="sticky-cta-title">Don't Miss Out!</h4>
-                        <p className="sticky-cta-subtitle">Limited seats available for the masterclass</p>
                     </div>
                     <div className="sticky-cta-action">
                         <button className="sticky-cta-btn" onClick={() => handleBookNow('Package 2')}>Book Now {getTicketPrice('Package 2', '₹ 30,000/-').replace('/-', '')}</button>

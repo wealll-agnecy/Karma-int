@@ -57,23 +57,23 @@ export default function KarmaBookingPage() {
                 } else {
                     console.warn('Backend responded but did not return a valid events list array. Using fallback schema.');
                     setEventDetails({
-                        _id: VALID_FALLBACK_ID, // <-- FIXED: Changed from broken mock-id string
+                        _id: VALID_FALLBACK_ID,
                         title: "Karma International Basic to Advanced Master Class 2026",
-                        venue: "The Grand Ballroom, Mumbai",
+                        venue: "ALTAIR BOUTIQUE HOTEL, SALT LAKE",
                         date: "2026-08-17T00:00:00.000Z",
                         ticketTypes: [{ name: "Delegate Pass" }],
-                        isFallback: true // Flag to identify it's mock data
+                        isFallback: true
                     });
                 }
             } catch (err) {
                 console.error('Failed to fetch event directly from backend endpoint:', err);
                 setEventDetails({
-                    _id: VALID_FALLBACK_ID, // <-- FIXED: Changed from broken mock-id string
+                    _id: VALID_FALLBACK_ID,
                     title: "Karma International Basic to Advanced Master Class 2026",
-                    venue: "The Grand Ballroom, Mumbai",
+                    venue: "ALTAIR BOUTIQUE HOTEL, SALT LAKE",
                     date: "2026-08-17T00:00:00.000Z",
                     ticketTypes: [{ name: "Delegate Pass" }],
-                    isFallback: true // Flag to identify it's mock data
+                    isFallback: true
                 });
             } finally {
                 setIsLoadingEvent(false);
@@ -215,7 +215,11 @@ export default function KarmaBookingPage() {
                         </div>
                         <p className="kb-event-meta">
                             📍 {eventDetails?.venue} &nbsp;·&nbsp;
-                            📅 {eventDetails?.date ? new Date(eventDetails.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}
+                            📅 {eventDetails?.date ? (
+                                (new Date(eventDetails.date).getDate() === 17 && new Date(eventDetails.date).getMonth() === 7 && new Date(eventDetails.date).getFullYear() === 2026)
+                                ? '17-21 August 2026'
+                                : new Date(eventDetails.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                            ) : ''}
                         </p>
                     </div>
                     <div className="kb-plan-chip">
