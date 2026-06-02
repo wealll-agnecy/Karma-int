@@ -162,7 +162,7 @@ exports.generateTicketPDF = async (ticketId) => {
             const qrX = 380;
             const qrY = 340;
             
-            const baseUrl = process.env.PUBLIC_URL || 'https://growthutsav.com'; 
+            const baseUrl = process.env.PUBLIC_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : 'https://growthutsav.com'); 
             const verificationUrl = `${baseUrl}/ticket/${ticket.uuid}`;
             
             const qrBuffer = await QRCode.toBuffer(verificationUrl, { 

@@ -9,7 +9,7 @@ const { sendTicketMail } = require('../utils/sendEmail');
  */
 exports.sendBookingConfirmation = async (user, event, pdfBuffer, bookingDetails) => {
     try {
-        const publicUrl = process.env.PUBLIC_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+        const publicUrl = process.env.PUBLIC_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : 'http://localhost:5173');
         const downloadUrl = `${publicUrl}/api/ticket/download/${bookingDetails.ticketId}`;
 
         const emailMessage = `

@@ -41,7 +41,7 @@ const processTicketAction = async (data) => {
         if (ticket.mobileNumber && ticket.mobileNumber !== '0000000000') {
             try {
                 console.log(`[TICKET QUEUE]: Sending WhatsApp to ${ticket.mobileNumber}`);
-                const publicUrl = process.env.PUBLIC_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+                const publicUrl = process.env.PUBLIC_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : 'http://localhost:5173');
                 const downloadUrl = `${publicUrl}/api/ticket/download-pdf/${ticket.uuid}`;
                 
                 const eventDateFormatted = new Date(ticket.event.date).toLocaleDateString(undefined, { 

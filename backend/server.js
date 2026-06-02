@@ -51,18 +51,33 @@ require('./queue/notificationQueue');
 const app = express();
 
 // --- CORS INITIALIZATION (Must be at the very top to set headers on 429 and 500 error responses) ---
-const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim()) : [];
+const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim().toLowerCase()) : [];
 app.use(cors({
     origin: function (origin, callback) {
         // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        // Allow exact growthutsav.in and its official subdomains, netlify.app, onrender.com plus local development
-        if (origin === 'https://growthutsav.in' || origin === 'https://www.growthutsav.in' || origin.endsWith('.growthutsav.in') || origin.endsWith('.netlify.app') || origin.endsWith('.onrender.com') || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+        const lowerOrigin = origin.toLowerCase();
+
+        // Allow exact growthutsav.in and karmainternationals.com plus their official subdomains, netlify.app, onrender.com and local development
+        if (
+            lowerOrigin === 'https://growthutsav.in' || 
+            lowerOrigin === 'https://www.growthutsav.in' || 
+            lowerOrigin.endsWith('.growthutsav.in') || 
+            lowerOrigin === 'https://karmainternationals.com' || 
+            lowerOrigin === 'https://www.karmainternationals.com' || 
+            lowerOrigin.endsWith('.karmainternationals.com') || 
+            lowerOrigin.endsWith('.netlify.app') || 
+            lowerOrigin.endsWith('.onrender.com') || 
+            lowerOrigin.startsWith('http://localhost') || 
+            lowerOrigin.startsWith('http://127.0.0.1') ||
+            lowerOrigin.startsWith('https://localhost') ||
+            lowerOrigin.startsWith('https://127.0.0.1')
+        ) {
             return callback(null, true);
         }
 
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes(origin)) {
+        if (allowedOrigins.indexOf(lowerOrigin) !== -1 || allowedOrigins.includes(lowerOrigin)) {
             return callback(null, true);
         } else {
             console.error(`🚨 [CORS REJECTED]: ${origin}`);
