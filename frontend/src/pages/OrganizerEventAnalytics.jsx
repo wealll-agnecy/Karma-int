@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Container, Row, Col, Table, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import apiClient from '../api/apiClient';
 import { toast } from 'react-hot-toast';
-import DashboardSkeleton from '../components/analytics/DashboardSkeleton';
-import '../css/dashboard.css';
-import '../css/global.css';
 import { formatCurrency } from '../utils/formatUtils';
+import { FaChartLine, FaWallet, FaTicketAlt, FaExclamationTriangle, FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
+
+const P = {
+    page: { minHeight: '100vh', background: 'linear-gradient(160deg,#fdf7ff 0%,#f5f0fb 50%,#faf7fb 100%)', padding: '0 0 60px' },
+    card: { background: 'rgba(255,255,255,0.97)', border: '1px solid #ede8f4', borderRadius: '22px', boxShadow: '0 8px 32px rgba(100,60,180,0.07)', transition: 'all .3s ease', padding: '24px' },
+    label: { fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#9ca3af', display: 'block', marginBottom: '8px' },
+    input: { border: '1.5px solid #ede8f4', borderRadius: '12px', background: '#f8f7fc', padding: '10px 14px', fontSize: '0.85rem', outline: 'none', width: '100%', color: '#1e1b2e' },
+    statCard: (accent) => ({ background: '#fff', border: `1.5px solid ${accent}22`, borderRadius: '18px', padding: '20px', boxShadow: `0 8px 24px ${accent}15` }),
+};
 
 const EventDetails = () => {
     const { id } = useParams();
@@ -15,14 +21,8 @@ const EventDetails = () => {
     const [error, setError] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
-    // Expense Form State
     const [expenseForm, setExpenseForm] = useState({
-        title: '',
-        amount: '',
-        category: 'Other',
-        description: '',
-        date: new Date().toISOString().split('T')[0],
-        status: 'Pending'
+        title: '', amount: '', category: 'Other', description: '', date: new Date().toISOString().split('T')[0], status: 'Pending'
     });
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -33,21 +33,9 @@ const EventDetails = () => {
         try {
             const res = await apiClient.get(`/api/v1/organizer/event/${id}/details`);
             setData(res.data);
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load event analytics');
-        } finally {
-            setLoading(false);
-        }
+        } catch (err) { setError(err.response?.data?.message || 'Failed to load event analytics'); } finally { setLoading(false); }
     };
-
-    useEffect(() => {
-        if (!id || id === 'undefined') {
-            console.error("[CLIENT]: Detected invalid 'undefined' event ID in URL");
-            setLoading(false);
-            return;
-        }
-        fetchDetails();
-    }, [id]);
+    useEffect(() => { if (!id || id === 'undefined') { setLoading(false); return; } fetchDetails(); }, [id]);
 
     const handleExpenseSubmit = async (e) => {
         e.preventDefault();
@@ -60,47 +48,21 @@ const EventDetails = () => {
                 await apiClient.post('/api/v1/expenses', { ...expenseForm, eventId: id });
                 toast.success('Expense added successfully');
             }
-            setExpenseForm({
-                title: '',
-                amount: '',
-                category: 'Other',
-                description: '',
-                date: new Date().toISOString().split('T')[0],
-                status: 'Pending'
-            });
+            setExpenseForm({ title: '', amount: '', category: 'Other', description: '', date: new Date().toISOString().split('T')[0], status: 'Pending' });
             setIsEditing(false);
             setEditId(null);
             fetchDetails();
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Operation failed');
-        } finally {
-            setSubmitting(false);
-        }
+        } catch (err) { toast.error(err.response?.data?.message || 'Operation failed'); } finally { setSubmitting(false); }
     };
 
     const handleEdit = (exp) => {
-        setExpenseForm({
-            title: exp.title,
-            amount: exp.amount,
-            category: exp.category,
-            description: exp.description || '',
-            date: new Date(exp.date).toISOString().split('T')[0],
-            status: exp.status || 'Pending'
-        });
-        setIsEditing(true);
-        setEditId(exp._id);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setExpenseForm({ title: exp.title, amount: exp.amount, category: exp.category, description: exp.description || '', date: new Date(exp.date).toISOString().split('T')[0], status: exp.status || 'Pending' });
+        setIsEditing(true); setEditId(exp._id); window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleDelete = async (expId) => {
         if (!window.confirm('Are you sure you want to delete this expense?')) return;
-        try {
-            await apiClient.delete(`/api/v1/expenses/${expId}`);
-            toast.success('Expense deleted');
-            fetchDetails();
-        } catch (err) {
-            toast.error('Failed to delete expense');
-        }
+        try { await apiClient.delete(`/api/v1/expenses/${expId}`); toast.success('Expense deleted'); fetchDetails(); } catch (err) { toast.error('Failed to delete expense'); }
     };
 
     const toggleStatus = async (exp) => {
@@ -108,274 +70,221 @@ const EventDetails = () => {
             const newStatus = exp.status === 'Paid' ? 'Pending' : 'Paid';
             await apiClient.put(`/api/v1/expenses/${exp._id}`, { status: newStatus });
             fetchDetails();
-        } catch (err) {
-            toast.error('Failed to update status');
-        }
+        } catch (err) { toast.error('Failed to update status'); }
     };
 
-    if (loading) return <DashboardSkeleton />;
-
-    if (error) return (
-        <Container className="py-5 text-center">
-            <Alert variant="danger" className="dashboard-card border-danger/20 text-danger rounded-4 p-4 shadow-sm">
-                <h4 className="fw-bold mb-2">Error Loading Analytics</h4>
-                <p>{error}</p>
-            </Alert>
-        </Container>
+    if (loading) return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#fdf7ff' }}>
+            <Spinner animation="border" style={{ color: '#8b5cf6', width: '2.5rem', height: '2.5rem' }} />
+        </div>
     );
 
-    if (!data || data.totalTickets === 0) {
-        return (
-            <Container className="py-5 text-center">
-                <h5 className="dashboard-title-main">No Data Available for this Event</h5>
-            </Container>
-        );
-    }
+    if (error) return (
+        <div style={{ padding: '80px 24px', textAlign: 'center', background: '#fdf7ff', minHeight: '100vh' }}>
+            <div style={{ display: 'inline-block', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '16px', padding: '32px', color: '#ef4444' }}>
+                <FaExclamationTriangle size={32} style={{ marginBottom: '16px' }} />
+                <h4 style={{ fontWeight: 800, margin: '0 0 8px 0' }}>Error Loading Analytics</h4>
+                <p style={{ margin: 0 }}>{error}</p>
+            </div>
+        </div>
+    );
+
+    if (!data || data.totalTickets === 0) return (
+        <div style={{ padding: '80px 24px', textAlign: 'center', background: '#fdf7ff', minHeight: '100vh' }}>
+            <div style={{ fontSize: '4rem', opacity: 0.15, marginBottom: '16px' }}>📊</div>
+            <h5 style={{ fontWeight: 800, color: '#1e1b2e' }}>No Data Available for this Event</h5>
+        </div>
+    );
 
     const { eventName, totalTickets, totalRevenue, totalExpenses, profit, salesByDate, planSales, expenses } = data;
 
     return (
-        <div className="dashboard-page">
-            <Container fluid className="px-md-5">
-                {/* Header */}
-                <div className="dashboard-header mb-5">
-                    <h2 className="dashboard-title-main">Event Analytics: {eventName}</h2>
-                    <p className="dashboard-subtext">Comprehensive breakdown of sales and expenditure data.</p>
+        <div style={P.page}>
+            <Container fluid style={{ maxWidth: '1400px', padding: '0 24px' }}>
+                <div style={{ padding: '40px 0 28px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: '8px' }}>Event Analytics</div>
+                    <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 800, letterSpacing: '-1.5px', color: '#1e1b2e', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <FaChartLine color="#d946ef" size={28} /> {eventName}
+                    </h1>
+                    <p style={{ color: '#6b7280', marginTop: '6px', marginBottom: 0, fontSize: '0.9rem' }}>Comprehensive breakdown of sales and expenditure data.</p>
                 </div>
 
-                {/* Expense Entry Section */}
-                <div className="dashboard-card shadow-sm mb-5">
-                    <h5 className="dashboard-title-main mb-4" style={{ fontSize: '1.25rem' }}>
-                        {isEditing ? '📝 Edit Expense' : '➕ Add New Expense'}
+                <Row className="g-3 mb-5">
+                    <Col xs={6} md={3}>
+                        <div style={P.statCard('#8b5cf6')}>
+                            <div style={P.label}>Total Tickets Sold</div>
+                            <div style={{ fontSize: 'clamp(1.15rem, 5vw, 1.8rem)', fontWeight: 800, color: '#1e1b2e', letterSpacing: '-1px', whiteSpace: 'nowrap' }}>{totalTickets.toLocaleString()}</div>
+                        </div>
+                    </Col>
+                    <Col xs={6} md={3}>
+                        <div style={P.statCard('#10b981')}>
+                            <div style={P.label}>Total Revenue</div>
+                            <div style={{ fontSize: 'clamp(1.15rem, 5vw, 1.8rem)', fontWeight: 800, color: '#10b981', letterSpacing: '-1px', whiteSpace: 'nowrap' }}>{formatCurrency(totalRevenue)}</div>
+                        </div>
+                    </Col>
+                    <Col xs={6} md={3}>
+                        <div style={P.statCard('#ef4444')}>
+                            <div style={P.label}>Total Expenses</div>
+                            <div style={{ fontSize: 'clamp(1.15rem, 5vw, 1.8rem)', fontWeight: 800, color: '#ef4444', letterSpacing: '-1px', whiteSpace: 'nowrap' }}>{formatCurrency(totalExpenses)}</div>
+                        </div>
+                    </Col>
+                    <Col xs={6} md={3}>
+                        <div style={P.statCard(profit > 0 ? '#10b981' : '#ef4444')}>
+                            <div style={P.label}>{profit < 0 ? 'Net Loss' : 'Net Profit'}</div>
+                            <div style={{ fontSize: 'clamp(1.15rem, 5vw, 1.8rem)', fontWeight: 800, color: profit > 0 ? '#10b981' : '#ef4444', letterSpacing: '-1px', whiteSpace: 'nowrap' }}>{formatCurrency(Math.abs(profit))}</div>
+                        </div>
+                    </Col>
+                </Row>
+
+                <div style={{ ...P.card, marginBottom: '40px' }}>
+                    <h5 style={{ fontWeight: 800, color: '#1e1b2e', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {isEditing ? <FaEdit color="#d946ef" /> : <FaPlus color="#d946ef" />}
+                        {isEditing ? 'Edit Expense' : 'Add New Expense'}
                     </h5>
-                    <form onSubmit={handleExpenseSubmit} className="row g-3">
-                        <div className="col-md-4">
-                            <label className="form-label small fw-bold">Expense Title</label>
-                            <input 
-                                type="text" 
-                                className="form-control rounded-3" 
-                                placeholder="e.g. Venue Advance"
-                                value={expenseForm.title}
-                                onChange={(e) => setExpenseForm({...expenseForm, title: e.target.value})}
-                                required
-                            />
-                        </div>
-                        <div className="col-md-2">
-                            <label className="form-label small fw-bold">Amount (INR)</label>
-                            <input 
-                                type="number" 
-                                className="form-control rounded-3" 
-                                placeholder="0.00"
-                                value={expenseForm.amount}
-                                onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
-                                required
-                            />
-                        </div>
-                        <div className="col-md-3">
-                            <label className="form-label small fw-bold">Category</label>
-                            <select 
-                                className="form-select rounded-3"
-                                value={expenseForm.category}
-                                onChange={(e) => setExpenseForm({...expenseForm, category: e.target.value})}
-                            >
-                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
-                        </div>
-                        <div className="col-md-3">
-                            <label className="form-label small fw-bold">Date</label>
-                            <input 
-                                type="date" 
-                                className="form-control rounded-3"
-                                value={expenseForm.date}
-                                onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})}
-                                required
-                            />
-                        </div>
-                        <div className="col-md-9">
-                            <label className="form-label small fw-bold">Notes / Description</label>
-                            <input 
-                                type="text" 
-                                className="form-control rounded-3" 
-                                placeholder="Add additional details..."
-                                value={expenseForm.description}
-                                onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})}
-                            />
-                        </div>
-                        <div className="col-md-3 d-flex align-items-end gap-2">
-                            <button type="submit" className="btn btn-primary-custom w-100 py-2" disabled={submitting}>
-                                {submitting ? 'Processing...' : (isEditing ? 'Update' : 'Add Expense')}
-                            </button>
-                            {isEditing && (
-                                <button 
-                                    type="button" 
-                                    className="btn btn-outline-secondary rounded-pill px-3"
-                                    onClick={() => {
-                                        setIsEditing(false);
-                                        setEditId(null);
-                                        setExpenseForm({
-                                            title: '', amount: '', category: 'Other', description: '', 
-                                            date: new Date().toISOString().split('T')[0], status: 'Pending'
-                                        });
-                                    }}
-                                >
-                                    Cancel
+                    <form onSubmit={handleExpenseSubmit}>
+                        <Row className="g-3">
+                            <Col md={3}>
+                                <label style={P.label}>Expense Title</label>
+                                <input type="text" style={P.input} placeholder="e.g. Venue Advance" value={expenseForm.title} onChange={e => setExpenseForm({...expenseForm, title: e.target.value})} required />
+                            </Col>
+                            <Col md={2}>
+                                <label style={P.label}>Amount (INR)</label>
+                                <input type="number" style={P.input} placeholder="0.00" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} required />
+                            </Col>
+                            <Col md={2}>
+                                <label style={P.label}>Category</label>
+                                <select style={P.input} value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}>
+                                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                </select>
+                            </Col>
+                            <Col md={2}>
+                                <label style={P.label}>Date</label>
+                                <input type="date" style={P.input} value={expenseForm.date} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} required />
+                            </Col>
+                            <Col md={3} style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                                <button type="submit" disabled={submitting} style={{ flex: 1, background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '10px 14px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(139,92,246,.25)' }}>
+                                    {submitting ? 'Processing...' : (isEditing ? 'Update' : 'Add Expense')}
                                 </button>
-                            )}
-                        </div>
+                                {isEditing && (
+                                    <button type="button" onClick={() => { setIsEditing(false); setEditId(null); setExpenseForm({ title: '', amount: '', category: 'Other', description: '', date: new Date().toISOString().split('T')[0], status: 'Pending' }); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '12px', color: '#64748b', fontWeight: 700, fontSize: '0.85rem', padding: '10px 14px', cursor: 'pointer' }}>Cancel</button>
+                                )}
+                            </Col>
+                            <Col md={12}>
+                                <label style={P.label}>Notes / Description</label>
+                                <input type="text" style={P.input} placeholder="Add additional details..." value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} />
+                            </Col>
+                        </Row>
                     </form>
                 </div>
 
-                {/* 1. Summary Cards */}
-                <div className="stats-grid-saas mb-5">
-                    <div className="dashboard-card shadow-sm">
-                        <span className="card-title-sm">Total Tickets Sold</span>
-                        <h3 className="card-value-lg">{totalTickets.toLocaleString()}</h3>
-                    </div>
-                    <div className="dashboard-card shadow-sm">
-                        <span className="card-title-sm">Total Revenue</span>
-                        <h3 className="card-value-lg text-success">{formatCurrency(totalRevenue)}</h3>
-                    </div>
-                    <div className="dashboard-card shadow-sm">
-                        <span className="card-title-sm">Total Expenses</span>
-                        <h3 className="card-value-lg text-danger">{formatCurrency(totalExpenses)}</h3>
-                    </div>
-                    <div className={`dashboard-card shadow-sm ${profit > 0 ? '' : (profit < 0 ? 'highlight-card' : '')}`}>
-                        <span className="card-title-sm">{profit < 0 ? 'Net Loss' : 'Net Profit'}</span>
-                        <h3 className={`card-value-lg ${profit > 0 ? 'text-success' : (profit < 0 ? 'text-danger' : '')}`}>
-                            {formatCurrency(Math.abs(profit))}
-                        </h3>
-                    </div>
-                </div>
-
                 <Row className="g-4 mb-5">
-                    {/* 2. Date-wise Sales Table */}
                     <Col lg={6}>
-                        <div className="dashboard-card shadow-sm h-100">
-                            <h5 className="dashboard-title-main mb-4" style={{ fontSize: '1.25rem' }}>Date-wise Ticket Sales</h5>
-                            <div className="table-responsive rounded-4 border overflow-hidden shadow-sm">
-                                <Table hover className="m-0 align-middle text-nowrap">
-                                    <thead className="bg-light">
-                                        <tr className="small text-uppercase fw-bold text-slate tracking-widest">
-                                            <th className="px-4 py-3">Date</th>
-                                            <th className="py-3 text-end">Tickets Sold</th>
-                                            <th className="px-4 py-3 text-end">Revenue</th>
+                        <div style={{ ...P.card, height: '100%', padding: 0 }}>
+                            <div style={{ padding: '24px 24px 16px' }}>
+                                <h5 style={{ fontWeight: 800, color: '#1e1b2e', margin: 0 }}>Date-wise Ticket Sales</h5>
+                            </div>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '450px' }}>
+                                    <thead style={{ background: '#f8f7fc' }}>
+                                        <tr>
+                                            <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'left', whiteSpace: 'nowrap' }}>Date</th>
+                                            <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right', whiteSpace: 'nowrap' }}>Tickets Sold</th>
+                                            <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right', whiteSpace: 'nowrap' }}>Revenue</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {salesByDate?.length > 0 ? salesByDate.map((sales, idx) => (
-                                            <tr key={idx} className="border-bottom border-slate-100">
-                                                <td className="px-4 py-3 fw-bold">{sales.date}</td>
-                                                <td className="py-3 text-end">{sales.ticketsSold.toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-end fw-bold text-success">{formatCurrency(sales.revenue)}</td>
+                                            <tr key={idx} style={{ borderTop: '1px solid #ede8f4' }}>
+                                                <td style={{ padding: '16px 24px', fontWeight: 700, fontSize: '0.85rem', color: '#1e1b2e', whiteSpace: 'nowrap' }}>{sales.date}</td>
+                                                <td style={{ padding: '16px 24px', textAlign: 'right', fontSize: '0.85rem', color: '#4b5563', whiteSpace: 'nowrap' }}>{sales.ticketsSold.toLocaleString()}</td>
+                                                <td style={{ padding: '16px 24px', textAlign: 'right', fontWeight: 800, color: '#10b981', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{formatCurrency(sales.revenue)}</td>
                                             </tr>
-                                        )) : (
-                                            <tr><td colSpan={3} className="text-center py-4 text-muted small">No tickets sold yet.</td></tr>
-                                        )}
+                                        )) : (<tr><td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>No tickets sold yet.</td></tr>)}
                                     </tbody>
-                                </Table>
+                                </table>
                             </div>
                         </div>
                     </Col>
-
-                    {/* 3. Plan-wise Sales Table */}
                     <Col lg={6}>
-                        <div className="dashboard-card shadow-sm h-100">
-                            <h5 className="dashboard-title-main mb-4" style={{ fontSize: '1.25rem' }}>Plan-wise Sales</h5>
-                            <div className="table-responsive rounded-4 border overflow-hidden shadow-sm">
-                                <Table hover className="m-0 align-middle text-nowrap">
-                                    <thead className="bg-light">
-                                        <tr className="small text-uppercase fw-bold text-slate tracking-widest">
-                                            <th className="px-4 py-3">Plan Name</th>
-                                            <th className="py-3 text-end">Tickets Sold</th>
-                                            <th className="px-4 py-3 text-end">Revenue</th>
+                        <div style={{ ...P.card, height: '100%', padding: 0 }}>
+                            <div style={{ padding: '24px 24px 16px' }}>
+                                <h5 style={{ fontWeight: 800, color: '#1e1b2e', margin: 0 }}>Plan-wise Sales</h5>
+                            </div>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '450px' }}>
+                                    <thead style={{ background: '#f8f7fc' }}>
+                                        <tr>
+                                            <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'left', whiteSpace: 'nowrap' }}>Plan Name</th>
+                                            <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right', whiteSpace: 'nowrap' }}>Tickets Sold</th>
+                                            <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right', whiteSpace: 'nowrap' }}>Revenue</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {planSales?.length > 0 ? planSales.map((plan, idx) => (
-                                            <tr key={idx} className="border-bottom border-slate-100">
-                                                <td className="px-4 py-3 fw-bold">
-                                                    <span className="status-badge badge-pink">{plan.planName.toUpperCase()}</span>
+                                            <tr key={idx} style={{ borderTop: '1px solid #ede8f4' }}>
+                                                <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
+                                                    <span style={{ background: '#fdf4ff', color: '#d946ef', border: '1px solid #fbcfe8', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{plan.planName}</span>
                                                 </td>
-                                                <td className="py-3 text-end">{plan.ticketsSold.toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-end fw-bold text-success">{formatCurrency(plan.revenue)}</td>
+                                                <td style={{ padding: '16px 24px', textAlign: 'right', fontSize: '0.85rem', color: '#4b5563', whiteSpace: 'nowrap' }}>{plan.ticketsSold.toLocaleString()}</td>
+                                                <td style={{ padding: '16px 24px', textAlign: 'right', fontWeight: 800, color: '#10b981', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{formatCurrency(plan.revenue)}</td>
                                             </tr>
-                                        )) : (
-                                            <tr><td colSpan={3} className="text-center py-4 text-muted small">No plans matched.</td></tr>
-                                        )}
+                                        )) : (<tr><td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>No plans matched.</td></tr>)}
                                     </tbody>
-                                </Table>
+                                </table>
                             </div>
                         </div>
                     </Col>
                 </Row>
 
-                {/* 4. Expenses Breakdown Table */}
-                <div className="dashboard-card shadow-sm">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h5 className="dashboard-title-main m-0" style={{ fontSize: '1.25rem' }}>Expense History</h5>
-                        <div className="text-end">
-                            <span className="small text-muted d-block">Total Event Expenses</span>
-                            <span className="fw-bold text-danger h5 m-0">{formatCurrency(totalExpenses)}</span>
+                <div style={{ ...P.card, padding: 0 }}>
+                    <div style={{ padding: '24px 24px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h5 style={{ fontWeight: 800, color: '#1e1b2e', margin: 0 }}>Expense History</h5>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Total Event Expenses</div>
+                            <div style={{ fontWeight: 800, color: '#ef4444', fontSize: '1.2rem', lineHeight: 1 }}>{formatCurrency(totalExpenses)}</div>
                         </div>
                     </div>
-                    <div className="table-responsive rounded-4 border overflow-hidden shadow-sm">
-                        <Table hover className="m-0 align-middle text-nowrap">
-                            <thead className="bg-light">
-                                <tr className="small text-uppercase fw-bold text-slate tracking-widest">
-                                    <th className="px-4 py-3">Expense Details</th>
-                                    <th className="py-3">Category</th>
-                                    <th className="py-3">Status</th>
-                                    <th className="py-3">Date</th>
-                                    <th className="px-4 py-3 text-end">Amount</th>
-                                    <th className="px-4 py-3 text-center">Actions</th>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
+                            <thead style={{ background: '#f8f7fc' }}>
+                                <tr>
+                                    <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'left', whiteSpace: 'nowrap' }}>Details</th>
+                                    <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'left', whiteSpace: 'nowrap' }}>Category</th>
+                                    <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'left', whiteSpace: 'nowrap' }}>Status</th>
+                                    <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'left', whiteSpace: 'nowrap' }}>Date</th>
+                                    <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right', whiteSpace: 'nowrap' }}>Amount</th>
+                                    <th style={{ padding: '12px 24px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {expenses?.length > 0 ? expenses.map((exp, idx) => (
-                                    <tr key={idx} className="border-bottom border-slate-100">
-                                        <td className="px-4 py-3">
-                                            <div className="fw-bold">{exp.title}</div>
-                                            <div className="small text-muted">{exp.description || 'No notes'}</div>
+                                    <tr key={idx} style={{ borderTop: '1px solid #ede8f4', transition: 'background .2s' }} onMouseEnter={e => e.currentTarget.style.background = '#faf5ff'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                        <td style={{ padding: '16px 24px' }}>
+                                            <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.9rem', marginBottom: '4px', whiteSpace: 'nowrap' }}>{exp.title}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{exp.description || 'No notes'}</div>
                                         </td>
-                                        <td className="py-3">
-                                            <span className="status-badge badge-slate">{exp.category}</span>
+                                        <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
+                                            <span style={{ background: '#f1f5f9', color: '#475569', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{exp.category}</span>
                                         </td>
-                                        <td className="py-3">
-                                            <span 
-                                                className={`status-badge cursor-pointer ${exp.status === 'Paid' ? 'badge-green' : 'badge-pink'}`}
-                                                onClick={() => toggleStatus(exp)}
-                                                title="Click to toggle status"
-                                            >
+                                        <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
+                                            <span onClick={() => toggleStatus(exp)} style={{ background: exp.status === 'Paid' ? '#d1fae5' : '#fee2e2', color: exp.status === 'Paid' ? '#059669' : '#dc2626', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                 {exp.status || 'Pending'}
                                             </span>
                                         </td>
-                                        <td className="py-3 text-muted">{new Date(exp.date).toLocaleDateString()}</td>
-                                        <td className="px-4 py-3 text-end fw-bold text-danger">{formatCurrency(exp.amount)}</td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="d-flex justify-content-center gap-2">
-                                                <button 
-                                                    className="btn btn-sm btn-outline-primary rounded-pill px-3"
-                                                    onClick={() => handleEdit(exp)}
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button 
-                                                    className="btn btn-sm btn-outline-danger rounded-pill px-3"
-                                                    onClick={() => handleDelete(exp._id)}
-                                                >
-                                                    Delete
-                                                </button>
+                                        <td style={{ padding: '16px 24px', fontSize: '0.85rem', color: '#4b5563', fontWeight: 600, whiteSpace: 'nowrap' }}>{new Date(exp.date).toLocaleDateString()}</td>
+                                        <td style={{ padding: '16px 24px', textAlign: 'right', fontWeight: 800, color: '#ef4444', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>{formatCurrency(exp.amount)}</td>
+                                        <td style={{ padding: '16px 24px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', whiteSpace: 'nowrap' }}>
+                                                <button onClick={() => handleEdit(exp)} style={{ background: 'transparent', border: '1.5px solid #d946ef', borderRadius: '8px', color: '#d946ef', padding: '6px 8px', cursor: 'pointer', transition: 'all .2s' }} onMouseEnter={e => e.currentTarget.style.background = '#fdf4ff'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><FaEdit size={12} /></button>
+                                                <button onClick={() => handleDelete(exp._id)} style={{ background: 'transparent', border: '1.5px solid #fca5a5', borderRadius: '8px', color: '#ef4444', padding: '6px 8px', cursor: 'pointer', transition: 'all .2s' }} onMouseEnter={e => e.currentTarget.style.background = '#fff1f2'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><FaTrash size={12} /></button>
                                             </div>
                                         </td>
                                     </tr>
-                                )) : (
-                                    <tr><td colSpan={6} className="text-center py-4 text-muted small">No expenses recorded for this event.</td></tr>
-                                )}
+                                )) : (<tr><td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>No expenses recorded for this event.</td></tr>)}
                             </tbody>
-                        </Table>
+                        </table>
                     </div>
                 </div>
-
             </Container>
         </div>
     );

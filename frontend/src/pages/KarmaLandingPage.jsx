@@ -238,8 +238,8 @@ const KarmaLandingPage = () => {
                     </div>
 
                     {/* Bottom Speaker Names & Descriptions Row */}
-                    <div className="footer-divider-line"></div>
-                    <div className="speakers-info-row">
+                    {/* <div className="footer-divider-line"></div> */}
+                    {/* <div className="speakers-info-row">
                         <div className="speaker-info-col">
                             <h3 className="info-name">Richa Dave</h3>
                             <p className="info-title">The Iconic Makeup Educator</p>
@@ -252,7 +252,7 @@ const KarmaLandingPage = () => {
                             <h3 className="info-name">Prarthi Dave</h3>
                             <p className="info-title">Iconic Hair Stylist & Educator</p>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Partner Grid Section */}
                     <div className="footer-divider-line"></div>
@@ -307,9 +307,14 @@ const KarmaLandingPage = () => {
                                     alt="Aflairza Logo"
                                     className="partner-logo-img"
                                 />
+                                &amp;
+                                <img src="/images/recode_logo_new.png" alt="" className="partner-logo-img" />
                             </div>
                         </div>
+
+
                     </div>
+                    <div className="footer-divider-line"></div>
                 </div>
             </div>
 

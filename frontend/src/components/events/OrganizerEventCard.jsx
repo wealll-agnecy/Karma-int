@@ -64,7 +64,7 @@ const OrganizerEventCard = ({ event }) => {
                            <FaUsers className="text-slate opacity-40" />
                            <span className="fw-bold small">{sold} Sold</span>
                         </div>
-                        <div className="fw-black text-pink">{formatCurrency(minPrice)}</div>
+                        <div className="fw-black text-pink" style={{ fontSize: '0.9rem' }}>Starting from {formatCurrency(20000)}</div>
                     </div>
                 </div>
 

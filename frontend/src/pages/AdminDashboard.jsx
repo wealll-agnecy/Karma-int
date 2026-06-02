@@ -1,292 +1,278 @@
 import { useState, useEffect } from 'react';
 import * as adminApi from '../api/adminApi';
-import { Container, Row, Col, Card, Button, Badge, Table, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Button, Badge, Table } from 'react-bootstrap';
 import {
-    FaWallet, FaUsers, FaTicketAlt, FaShieldAlt, FaEye, FaCheck, FaTimes,
-    FaCalendarCheck, FaShoppingBag, FaBolt, FaChevronRight, FaChartLine,
-    FaEllipsisV, FaCheckCircle, FaTrash
+    FaWallet, FaUsers, FaTicketAlt, FaCheck,
+    FaChevronRight, FaChartLine, FaTrash, FaEdit, FaEnvelope, FaShieldAlt
 } from 'react-icons/fa';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import StatsCard from '../components/analytics/StatsCard';
 import DashboardSkeleton from '../components/analytics/DashboardSkeleton';
 import { Link } from 'react-router-dom';
-import * as analyticsApi from '../api/analyticsApi';
 import toast from 'react-hot-toast';
 import '../css/dashboard.css';
 import '../css/global.css';
 import { formatCurrency } from '../utils/formatUtils';
+import * as eventApi from '../api/eventApi';
+import EventLandingEditor from '../components/events/EventLandingEditor';
+
+/* ─── Design tokens ─── */
+const P = {
+    page: { minHeight: '100vh', background: 'linear-gradient(160deg,#fdf7ff 0%,#f5f0fb 50%,#faf7fb 100%)', padding: '0 0 60px' },
+    card: { background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(16px)', border: '1px solid #ede8f4', borderRadius: '22px', boxShadow: '0 8px 32px rgba(100,60,180,0.07)', transition: 'all .3s ease', padding: '28px' },
+    metricCard: (accent) => ({ background: '#fff', border: `1.5px solid ${accent}22`, borderRadius: '22px', boxShadow: `0 8px 28px ${accent}10`, transition: 'all .3s ease', padding: '24px', position: 'relative', overflow: 'hidden' }),
+    label: { fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#9ca3af', display: 'block', marginBottom: '8px' },
+    value: { fontSize: '2rem', fontWeight: 800, letterSpacing: '-1.5px', lineHeight: 1, color: '#111827' },
+    sectionTitle: { fontSize: '1.1rem', fontWeight: 700, color: '#1e1b2e', letterSpacing: '-0.3px', margin: 0 },
+    tag: { background: '#f3f4f6', color: '#6b7280', borderRadius: '8px', padding: '4px 12px', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' },
+};
 
 const chartData = [
     { name: 'Jan', value: 38000 },
     { name: 'Feb', value: 42000 },
-    
     { name: 'Mar', value: 39000 },
     { name: 'Apr', value: 85000 },
 ];
 
-
-
 const AdminDashboard = () => {
-    const [stats, setStats] = useState(null);
-    const [liveStats, setLiveStats] = useState({
-        revenue: 0,
-        profit: 0,
-        netProfit: 0,
-        totalOrganizers: 0,
-        totalStaff: 0,
-        totalEvents: 0,
-        ticketsSold: 0,
-        expenses: 0,
-        activities: []
-    });
+    const [liveStats, setLiveStats] = useState({ revenue: 0, profit: 0, netProfit: 0, totalOrganizers: 0, totalStaff: 0, totalEvents: 0, ticketsSold: 0, expenses: 0, activities: [] });
+    const [events, setEvents] = useState([]);
+    const [editorOpen, setEditorOpen] = useState(false);
+    const [selectedEventToEdit, setSelectedEventToEdit] = useState(null);
     const [loading, setLoading] = useState(true);
-
 
     const fetchDashboardData = async () => {
         try {
-            // Fetch core intelligence data consolidated
-            const [adminStatsRes] = await Promise.all([
-                adminApi.getAdminStats()
-            ]);
-
+            const [adminStatsRes, eventsRes] = await Promise.all([adminApi.getAdminStats(), eventApi.getEvents()]);
             const adminData = adminStatsRes.data.data;
-
-            setLiveStats({
-                revenue: adminData.totalRevenue || 0,
-                totalOrganizers: adminData.totalOrganizers || 0,
-                totalStaff: adminData.totalStaff || 0,
-                totalEvents: adminData.totalEvents || 0,
-                ticketsSold: adminData.totalTicketsSold || 0,
-                profit: adminData.totalProfit || 0,
-                totalEnquiries: adminData.totalEnquiries || 0,
-                activities: adminData.activities || []
-            });
-
-        } catch (err) {
-            console.error('Critical Console Sync Failure:', err);
-        } finally {
-            setLoading(false);
-        }
+            setEvents(eventsRes.data?.data || []);
+            setLiveStats({ revenue: adminData.totalRevenue || 0, totalOrganizers: adminData.totalOrganizers || 0, totalStaff: adminData.totalStaff || 0, totalEvents: adminData.totalEvents || 0, ticketsSold: adminData.totalTicketsSold || 0, profit: adminData.totalProfit || 0, totalEnquiries: adminData.totalEnquiries || 0, activities: adminData.activities || [] });
+        } catch (err) { console.error('Critical Console Sync Failure:', err); } finally { setLoading(false); }
     };
+    useEffect(() => { fetchDashboardData(); }, []);
 
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
+    if (loading) return <DashboardSkeleton />;
 
-
-
-
-    if (loading) {
-        return <DashboardSkeleton />;
-    }
-
-    const currentRevenue = Number(liveStats.revenue) || 0;
+    const topMetrics = [
+        { label: 'Organizers', value: liveStats.totalOrganizers, sub: 'Active Hosts', accent: '#8b5cf6' },
+        { label: 'Staff Units', value: liveStats.totalStaff, sub: 'Assigned Nodes', accent: '#3b82f6' },
+        { label: 'Live Events', value: liveStats.totalEvents, sub: 'Global Catalog', accent: '#ec4899' },
+        { label: 'Tickets Sold', value: liveStats.ticketsSold?.toLocaleString(), sub: 'Total Sales', accent: '#10b981' },
+    ];
 
     return (
-        <div className="dashboard-page p-0">
-            <Container fluid className="px-md-5 pt-0 pb-3">
-                {/* ─── Header ─── */}
-                <div className="dashboard-header overview-section mb-3">
-                    <h2 className="dashboard-title-main mb-1 d-flex align-items-center gap-3">
-                        <FaChartLine className="text-pink d-none d-lg-inline-flex" /> Overview
-                    </h2>
-                    <p className="dashboard-subtext m-0">Analytics, finances and platform management portal.</p>
+        <div style={P.page}>
+            <Container fluid style={{ maxWidth: '1400px', padding: '0 24px' }}>
+                {/* Header */}
+                <div style={{ padding: '40px 0 32px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: '8px' }}>Admin Portal</div>
+                    <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 800, letterSpacing: '-1.5px', color: '#1e1b2e', margin: 0 }}>Overview</h1>
+                    <p style={{ color: '#6b7280', marginTop: '6px', marginBottom: 0, fontSize: '0.9rem' }}>Analytics, finances and platform management portal.</p>
                 </div>
 
-                {/* ─── Stats Grid (Desktop) ─── */}
-                <div className="stats-grid-saas mt-2 d-none d-md-grid">
-                    <div className="dashboard-card">
-                        <span className="card-title-sm">Organizers</span>
-                        <h3 className="card-value-lg">{liveStats.totalOrganizers}</h3>
-                        <div className="mt-2 text-success small fw-bold">Active Hosts</div>
-                    </div>
-                    <div className="dashboard-card">
-                        <span className="card-title-sm">Staff units</span>
-                        <h3 className="card-value-lg">{liveStats.totalStaff}</h3>
-                        <div className="mt-2 text-slate small fw-bold">Master Nodes</div>
-                    </div>
-                    <div className="dashboard-card">
-                        <span className="card-title-sm">Live Events</span>
-                        <h3 className="card-value-lg">{liveStats.totalEvents}</h3>
-                        <div className="mt-2 text-slate small fw-bold">Global Catalog</div>
-                    </div>
-                    <div className="dashboard-card">
-                        <span className="card-title-sm">Tickets</span>
-                        <h3 className="card-value-lg">{liveStats.ticketsSold.toLocaleString()}</h3>
-                        <div className="mt-2 text-slate small fw-bold">Total Sales</div>
-                    </div>
-                    <Link to="/admin/enquiries" className="text-decoration-none text-dark">
-                        <div className="dashboard-card hover-lift transition-all h-100">
-                            <span className="card-title-sm d-flex justify-content-between align-items-center">
-                                Enquiries
-                                {liveStats.totalEnquiries > 0 && (
-                                    <Badge pill bg="pink" className="bg-pink text-white rounded-pill px-2 py-1 small">
-                                        {liveStats.totalEnquiries}
-                                    </Badge>
-                                )}
-                            </span>
-                            <h3 className="card-value-lg">{liveStats.totalEnquiries || 0}</h3>
-                            <div className="mt-2 text-pink small fw-bold d-flex align-items-center gap-1">
-                                View Inbox <FaChevronRight size={10} />
+                {/* Desktop metrics */}
+                <div className="d-none d-md-grid" style={{ gridTemplateColumns: 'repeat(5,1fr)', gap: '16px', marginBottom: '28px' }}>
+                    {topMetrics.map((m, i) => (
+                        <div key={i} style={P.metricCard(m.accent)}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 16px 40px ${m.accent}20`; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 8px 28px ${m.accent}10`; }}
+                        >
+                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: `radial-gradient(circle,${m.accent}20,transparent 70%)` }} />
+                            <span style={P.label}>{m.label}</span>
+                            <div style={P.value}>{m.value}</div>
+                            <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '8px', fontWeight: 600 }}>{m.sub}</div>
+                        </div>
+                    ))}
+                    {/* Enquiries card */}
+                    <Link to="/admin/enquiries" style={{ textDecoration: 'none' }}>
+                        <div style={{ ...P.metricCard('#f59e0b'), cursor: 'pointer' }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 16px 40px #f59e0b20'; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 28px #f59e0b10'; }}
+                        >
+                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'radial-gradient(circle,#f59e0b20,transparent 70%)' }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <span style={P.label}>Enquiries</span>
+                                {liveStats.totalEnquiries > 0 && <span style={{ background: '#fbbf24', color: '#fff', borderRadius: '999px', padding: '2px 8px', fontSize: '0.65rem', fontWeight: 700 }}>{liveStats.totalEnquiries}</span>}
                             </div>
+                            <div style={P.value}>{liveStats.totalEnquiries || 0}</div>
+                            <div style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>View Inbox <FaChevronRight size={8} /></div>
                         </div>
                     </Link>
                 </div>
 
-                {/* --- MOBILE STATS (5 cards strictly in one line) --- */}
-                <div className="d-md-none w-100 mb-4 pb-2 mt-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
-                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
-                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Hosts</div>
-                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.totalOrganizers}</div>
-                        <div className="mt-1 text-success" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Active</div>
-                    </div>
-                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
-                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Nodes</div>
-                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.totalStaff}</div>
-                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Master</div>
-                    </div>
-                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
-                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Events</div>
-                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.totalEvents}</div>
-                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Global</div>
-                    </div>
-                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
-                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Sales</div>
-                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.ticketsSold.toLocaleString()}</div>
-                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Total</div>
-                    </div>
-                    <Link to="/admin/enquiries" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-                        <div className="dashboard-card shadow-sm m-0 h-100" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden', position: 'relative' }}>
-                            {liveStats.totalEnquiries > 0 && (
-                                <span className="position-absolute top-0 end-0 p-1 bg-pink rounded-circle" style={{ width: '8px', height: '8px', margin: '4px' }}></span>
-                            )}
-                            <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Inbox</div>
-                            <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.totalEnquiries || 0}</div>
-                            <div className="mt-1 text-pink" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>View</div>
+                {/* Mobile metrics */}
+                <div className="d-md-none" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '18px' }}>
+                    {[...topMetrics, { label: 'Enquiries', value: liveStats.totalEnquiries || 0, sub: 'View Inbox', accent: '#f59e0b' }].map((m, i) => (
+                        <div key={i} style={{ ...P.card, padding: '12px 10px', textAlign: 'center', borderRadius: '16px' }}>
+                            <div style={{ ...P.label, fontSize: '0.52rem', marginBottom: '6px' }}>{m.label}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e1b2e', letterSpacing: '-0.5px' }}>{m.value}</div>
                         </div>
-                    </Link>
+                    ))}
                 </div>
 
-
-
-                {/* ─── Core Intelligence Panels ─── */}
-                <Row className="mb-4">
-                    {/* ─── Left Column ─── */}
+                {/* Intelligence Panels */}
+                <Row className="g-4 mb-4">
                     <Col xs={12} lg={4}>
-                        <Row className="g-4">
+                        <Row className="g-4 h-100">
+                            {/* Net Profit */}
                             <Col xs={6} lg={12}>
-                                {/* Net Profit */}
-                                <div className="dashboard-card d-flex flex-column justify-content-center h-100 p-3 p-md-4">
-                                    <span className="card-title-sm mb-2 mb-md-3">Net Profit</span>
-                                    <h2 className="fw-bold mb-2 mb-md-4" style={{ fontSize: '1.5rem', letterSpacing: '-0.04em' }}>
-                                        {formatCurrency(liveStats.profit || 0)}
-                                    </h2>
-                                    <div className="mt-1 mt-md-2 text-slate small fw-bold" style={{ fontSize: '0.65rem' }}>Master Calc</div>
-                                    <div className="mt-2 mt-md-4 pt-2 pt-md-3 border-top">
-                                        <div className="d-flex flex-column flex-md-row justify-content-between mb-1 mb-md-2">
-                                            <span className="small text-slate" style={{ fontSize: '0.6rem' }}>Volume</span>
-                                            <span className="small fw-bold" style={{ fontSize: '0.7rem' }}>{formatCurrency(liveStats.revenue || 0)}</span>
+                                <div style={{ ...P.card, background: 'linear-gradient(145deg,#1e1b2e,#2d2a4a)', color: '#fff', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <span style={{ ...P.label, color: 'rgba(255,255,255,0.5)' }}>Net Profit</span>
+                                        <div style={{ fontSize: 'clamp(1.4rem, 5vw, 2.2rem)', fontWeight: 800, letterSpacing: '-2px', margin: '8px 0 4px', background: 'linear-gradient(135deg,#c084fc,#818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', whiteSpace: 'nowrap' }}>
+                                            {formatCurrency(liveStats.profit || 0)}
                                         </div>
-                                        <div className="d-flex flex-column flex-md-row justify-content-between">
-                                            <span className="small text-slate" style={{ fontSize: '0.6rem' }}>Op Loss</span>
-                                            <span className="small fw-bold text-danger" style={{ fontSize: '0.7rem' }}>-{formatCurrency((liveStats.revenue || 0) - (liveStats.profit || 0))}</span>
+                                        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Master Calc</div>
+                                    </div>
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', marginTop: '16px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Volume</span>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>{formatCurrency(liveStats.revenue || 0)}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Op Loss</span>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f87171' }}>-{formatCurrency((liveStats.revenue || 0) - (liveStats.profit || 0))}</span>
                                         </div>
                                     </div>
                                 </div>
                             </Col>
+                            {/* Moderation */}
                             <Col xs={6} lg={12}>
-                                {/* Identity Moderation */}
-                                <div className="dashboard-card text-center d-flex flex-column justify-content-center align-items-center py-4 py-md-5 h-100 p-3 p-md-4">
-                                    <span className="card-title-sm align-self-start w-100 text-start mb-3 mb-md-4" style={{ fontSize: '0.6rem' }}>Moderation</span>
-                                    <div className="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-2 mb-md-3" style={{ width: '32px', height: '32px' }}>
-                                        <FaCheck className="text-white" size={12} />
+                                <div style={{ ...P.card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                    <span style={{ ...P.label, alignSelf: 'flex-start', marginBottom: '16px' }}>Moderation</span>
+                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg,#10b981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', boxShadow: '0 8px 20px #10b98130' }}>
+                                        <FaCheck color="#fff" size={18} />
                                     </div>
-                                    <p className="text-slate small fw-bold m-0" style={{ fontSize: '0.65rem', lineHeight: '1.2' }}>No pending<br/>requests</p>
+                                    <p style={{ color: '#6b7280', fontSize: '0.8rem', fontWeight: 600, margin: 0, lineHeight: 1.4 }}>No pending<br/>requests</p>
                                 </div>
                             </Col>
                         </Row>
                     </Col>
 
-                    {/* ─── Right Column ─── */}
-                    <Col xs={12} lg={8} className="d-flex flex-column gap-4">
-                        {/* Add Expenses */}
-                        <div className="dashboard-card">
-                            <div className="d-flex justify-content-between align-items-center mb-4">
-                                <span className="card-title-sm m-0">Add Expenses</span>
-                                <Badge bg="light" text="dark" className="border text-uppercase" style={{ fontSize: '0.65rem' }}>finance</Badge>
-                            </div>
-                            
-                            <div className="d-flex justify-content-between align-items-center p-3 rounded mb-3" style={{ border: '1px solid #f1f5f9' }}>
-                                 <div>
-                                     <div className="small fw-bold">Foods</div>
-                                     <div className="text-slate" style={{ fontSize: '0.7rem' }}>Other</div>
-                                 </div>
-                                 <div className="d-flex align-items-center gap-3">
-                                     <span className="fw-bold text-danger">₹5,000</span>
-                                     <div className="bg-primary rounded p-1 d-flex align-items-center justify-content-center" style={{ width: '24px', height: '24px', cursor: 'pointer' }}>
-                                         <FaTrash className="text-white" size={10} /> 
-                                     </div>
-                                 </div>
+                    <Col xs={12} lg={8}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
+                            {/* Add Expenses */}
+                            <div style={P.card}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                    <h5 style={P.sectionTitle}>Add Expenses</h5>
+                                    <span style={P.tag}>Finance</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderRadius: '14px', background: '#fafafa', border: '1.5px solid #f1f5f9', marginBottom: '14px' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.88rem' }}>Foods</div>
+                                        <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Other</div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ fontWeight: 800, color: '#ef4444', fontSize: '0.95rem' }}>₹5,000</span>
+                                        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                            <FaTrash color="#fff" size={10} />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <input type="text" placeholder="Description" style={{ flex: 2, minWidth: '100px', padding: '10px 14px', border: '1.5px solid #ede8f4', borderRadius: '12px', background: '#f8f7fc', fontSize: '0.82rem', outline: 'none' }} />
+                                    <input type="number" placeholder="Amount" style={{ flex: 1, minWidth: '80px', padding: '10px 14px', border: '1.5px solid #ede8f4', borderRadius: '12px', background: '#f8f7fc', fontSize: '0.82rem', outline: 'none' }} />
+                                    <select style={{ flex: 1, minWidth: '80px', padding: '10px 14px', border: '1.5px solid #ede8f4', borderRadius: '12px', background: '#f8f7fc', fontSize: '0.82rem', outline: 'none' }}>
+                                        <option>Other</option>
+                                        <option>Foods</option>
+                                    </select>
+                                    <button style={{ background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '0.78rem', padding: '10px 20px', cursor: 'pointer', whiteSpace: 'nowrap' }}>ADD</button>
+                                </div>
                             </div>
 
-                            <div className="d-flex gap-2 align-items-center mt-3">
-                                <input type="text" className="form-control form-control-sm" placeholder="Description" style={{ flex: 2, padding: '8px 12px' }} />
-                                <input type="number" className="form-control form-control-sm" placeholder="Amount" style={{ flex: 1, padding: '8px 12px' }} />
-                                <select className="form-select form-select-sm" style={{ flex: 1, padding: '8px 12px' }}>
-                                    <option>Other</option>
-                                    <option>Foods</option>
-                                </select>
-                                <Button variant="primary" size="sm" className="px-4 py-2 rounded-pill fw-bold" style={{ background: '#d946ef', border: 'none', fontSize: '0.75rem' }}>ADD</Button>
-                            </div>
-                        </div>
-
-                        {/* Revenue Intelligence */}
-                        <div className="dashboard-card">
-                            <div className="d-flex justify-content-between align-items-center mb-4">
-                                <span className="card-title-sm m-0">Revenue Intelligence</span>
-                                <Badge bg="light" text="dark" className="border text-uppercase" style={{ fontSize: '0.65rem' }}>real time</Badge>
-                            </div>
-                            <div style={{ width: '100%', height: '220px' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData}>
-                                        <defs>
-                                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dx={-10} />
-                                        <Tooltip 
-                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                            itemStyle={{ color: '#8b5cf6', fontWeight: 'bold' }}
-                                        />
-                                        <Area type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                            {/* Revenue Intelligence Chart */}
+                            <div style={{ ...P.card, flex: 1 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                    <h5 style={P.sectionTitle}>Revenue Intelligence</h5>
+                                    <span style={P.tag}>Real Time</span>
+                                </div>
+                                <div style={{ width: '100%', height: '200px' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={chartData}>
+                                            <defs>
+                                                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dx={-10} />
+                                            <Tooltip contentStyle={{ borderRadius: '14px', border: '1.5px solid #ede8f4', boxShadow: '0 8px 24px rgba(0,0,0,.08)' }} itemStyle={{ color: '#8b5cf6', fontWeight: 700 }} />
+                                            <Area type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorValue)" />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
                         </div>
                     </Col>
                 </Row>
 
-                {/* ─── Audit Feed ─── */}
-                <div className="dashboard-card mb-4">
-                    <h5 className="dashboard-title-main" style={{ fontSize: '1.25rem', marginBottom: '25px' }}>Security & Audit Feed</h5>
-                    <div className="data-list">
+                {/* Events CMS */}
+                <div style={{ ...P.card, marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
+                        <h5 style={P.sectionTitle}>Events CMS System</h5>
+                        <span style={P.tag}>Content Management</span>
+                    </div>
+                    <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #ede8f4' }}>
+                        <Table className="m-0 align-middle">
+                            <thead>
+                                <tr style={{ background: '#f8f7fc' }}>
+                                    <th style={{ padding: '14px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', border: 'none' }}>Event Name</th>
+                                    <th style={{ padding: '14px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', border: 'none', textAlign: 'right' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {events.map((ev) => (
+                                    <tr key={ev._id} style={{ borderTop: '1px solid #f3f4f6', transition: 'background .2s' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#faf5ff'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <td style={{ padding: '14px 20px', fontWeight: 600, color: '#1e1b2e', maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', border: 'none' }}>{ev.title}</td>
+                                        <td style={{ padding: '14px 20px', textAlign: 'right', border: 'none' }}>
+                                            <button
+                                                onClick={() => { setSelectedEventToEdit(ev); setEditorOpen(true); }}
+                                                style={{ background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 600, fontSize: '0.78rem', padding: '7px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                            >
+                                                <FaEdit size={11} /> Edit Content
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {events.length === 0 && (
+                                    <tr><td colSpan="2" style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: '0.85rem', border: 'none' }}>No events found</td></tr>
+                                )}
+                            </tbody>
+                        </Table>
+                    </div>
+                </div>
+
+                {editorOpen && selectedEventToEdit && (
+                    <EventLandingEditor
+                        show={editorOpen}
+                        onHide={() => { setEditorOpen(false); setSelectedEventToEdit(null); }}
+                        event={selectedEventToEdit}
+                        onEventUpdated={(updatedEvent) => {
+                            setEvents(events.map(e => e._id === updatedEvent._id ? updatedEvent : e));
+                            toast.success('Landing page updated seamlessly!');
+                        }}
+                    />
+                )}
+
+                {/* Audit Feed */}
+                <div style={{ ...P.card, marginBottom: '24px' }}>
+                    <h5 style={{ ...P.sectionTitle, marginBottom: '22px' }}>Security & Audit Feed</h5>
+                    <div>
                         {(liveStats?.activities || []).length > 0 ? (
-                            (liveStats?.activities || []).slice(0, 10).map((log, i) => (
-                                <div key={i} className="data-item p-3 border-0 bg-transparent border-bottom rounded-0">
-                                    <div className="data-left">
-                                        <h6 style={{ fontSize: '0.875rem' }}>{log.message}</h6>
-                                        <p style={{ fontSize: '0.75rem' }}>{new Date(log.time).toLocaleString()}</p>
+                            (liveStats.activities).slice(0, 10).map((log, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: i < 9 ? '1px solid #f3f4f6' : 'none', transition: 'background .2s' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600, color: '#1e1b2e', fontSize: '0.875rem', marginBottom: '3px' }}>{log.message}</div>
+                                        <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{new Date(log.time).toLocaleString()}</div>
                                     </div>
-                                    <div className="text-slate uppercase small fw-bold tracking-wider audit-feed-type" style={{ opacity: 0.6 }}>
-                                        {log.type}
-                                    </div>
+                                    <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: '999px', padding: '4px 12px', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>{log.type}</span>
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center py-5 text-slate opacity-40 small">Zero active logs.</div>
+                            <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af', fontSize: '0.88rem' }}>Zero active logs.</div>
                         )}
                     </div>
                 </div>

@@ -7,6 +7,12 @@ import toast from 'react-hot-toast';
 import '../css/dashboard.css';
 import '../css/AdminStyles.css';
 
+const P = {
+    page: { minHeight: '100vh', background: 'linear-gradient(160deg,#fdf7ff 0%,#f5f0fb 50%,#faf7fb 100%)', padding: '0 0 60px' },
+    card: { background: 'rgba(255,255,255,0.97)', border: '1px solid #ede8f4', borderRadius: '22px', boxShadow: '0 8px 32px rgba(100,60,180,0.07)', transition: 'all .3s ease', padding: '28px' },
+    label: { fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#9ca3af' },
+};
+
 const AdminBookings = () => {
     const [organizers, setOrganizers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -20,9 +26,7 @@ const AdminBookings = () => {
                 console.error('Error fetching organizers:', err);
                 if (err.response && err.response.status === 401) {
                     toast.error('Session expired. Redirecting to login...');
-                    setTimeout(() => {
-                        window.location.href = '/login';
-                    }, 1500);
+                    setTimeout(() => { window.location.href = '/login'; }, 1500);
                 } else {
                     toast.error('Failed to load organizers');
                 }
@@ -33,149 +37,125 @@ const AdminBookings = () => {
         fetchOrganizers();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="d-flex justify-content-center align-items-center vh-100">
-                <Spinner animation="border" variant="primary" />
-            </div>
-        );
-    }
+    if (loading) return (
+        <div className="d-flex justify-content-center align-items-center vh-100" style={{ background: '#fdf7ff' }}>
+            <Spinner animation="border" style={{ color: '#8b5cf6', width: '2.5rem', height: '2.5rem' }} />
+        </div>
+    );
 
     return (
-        <div className="dashboard-page bg-premium-light">
-            <Container fluid className="px-md-5 py-4">
-                <div className="dashboard-header overview-section mb-3">
-                    <div className="d-flex align-items-center gap-3 mb-2">
-                        <span className="badge-pink-soft px-3 py-1 rounded-pill small fw-bold">NETWORK INFRASTRUCTURE</span>
-                    </div>
-                    <h2 className="dashboard-title-main mb-1 d-flex align-items-center gap-3">
-                        <FaUserTie className="text-pink d-none d-lg-inline-flex" /> Organizers
-                    </h2>
-                    <p className="dashboard-subtext m-0">Real-time performance metrics and node management across all event hosts.</p>
+        <div style={P.page}>
+            <Container fluid style={{ maxWidth: '1400px', padding: '0 24px' }}>
+                {/* Header */}
+                <div style={{ padding: '40px 0 32px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: '8px' }}>Admin Portal</div>
+                    <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 800, letterSpacing: '-1.5px', color: '#1e1b2e', margin: 0 }}>Organizers</h1>
+                    <p style={{ color: '#6b7280', marginTop: '6px', marginBottom: 0, fontSize: '0.9rem' }}>Real-time performance metrics and node management across all event hosts.</p>
                 </div>
- 
-                <Row>
-                    <Col md={12}>
-                        {organizers.length === 0 ? (
-                            <Card className="border-0 shadow-sm rounded-5 text-center py-5 bg-white mb-4">
-                                <Card.Body className="py-5">
-                                    <div className="display-1 mb-4 opacity-10">🔭</div>
-                                    <h4 className="fw-black text-dark mb-2">No organizers detected.</h4>
-                                    <p className="text-secondary fw-medium mb-0">The registry is currently empty. Incoming host nodes will appear here in real-time.</p>
-                                </Card.Body>
-                            </Card>
-                        ) : (
-                            <>
-                                {/* ─── Desktop View (Table) ─── */}
-                                <Card className="border-0 shadow-sm rounded-5 overflow-hidden bg-white d-none d-lg-block mb-4">
-                                    <Card.Body className="p-0">
-                                        <div className="table-responsive">
-                                            <Table hover className="align-middle mb-0 custom-premium-table">
-                                                <thead className="bg-light/50 border-bottom">
-                                                    <tr>
-                                                        <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest">Organizer Node</th>
-                                                        <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Mobile Number</th>
-                                                        <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Active Events</th>
-                                                        <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Engagement</th>
-                                                        <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-end">Management</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="border-0">
-                                                    {organizers.map((org) => (
-                                                        <tr key={org._id} className="transition-all hover-bg-slate-50 border-bottom border-slate-100">
-                                                            <td className="px-4 py-4">
-                                                                <Link to={`/admin/bookings/${org._id}`} className="text-decoration-none d-flex align-items-center gap-3">
-                                                                    <div className="avatar-gradient-pink text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm fw-bold" style={{ width: '48px', height: '48px', fontSize: '1.2rem' }}>
-                                                                        {org.name?.charAt(0).toUpperCase()}
-                                                                    </div>
-                                                                    <div>
-                                                                        <h6 className="mb-0 fw-black text-dark hover-text-pink transition-all">{org.name}</h6>
-                                                                        <span className="small text-secondary fw-medium">{org.email}</span>
-                                                                    </div>
-                                                                </Link>
-                                                            </td>
-                                                            <td className="px-4 py-4 text-center">
-                                                                <span className="small text-secondary fw-bold">{org.phone || 'N/A'}</span>
-                                                            </td>
-                                                            <td className="px-4 py-4 text-center">
-                                                                <div className="d-flex flex-column align-items-center">
-                                                                    <span className="h5 mb-0 fw-black text-dark">{org.totalEvents}</span>
-                                                                    <span className="small text-secondary text-uppercase tracking-widest fw-bold" style={{ fontSize: '0.65rem' }}>Units</span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-4 py-4 text-center">
-                                                                <Badge className="bg-success-subtle text-success border border-success-light rounded-pill px-3 py-2 fw-bold small">
-                                                                    <FaTicketAlt className="me-2" />
-                                                                    {org.totalBookings} Attendees
-                                                                </Badge>
-                                                            </td>
-                                                            <td className="px-4 py-4 text-end">
-                                                                <Button 
-                                                                    as={Link} 
-                                                                    to={`/admin/bookings/${org._id}`}
-                                                                    className="btn-pink-outline rounded-pill px-4 py-2 fw-bold small transition-all d-inline-flex align-items-center gap-2"
-                                                                >
-                                                                    Events <FaChevronRight size={10} />
-                                                                </Button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </Table>
-                                        </div>
-                                    </Card.Body>
-                                </Card>
 
-                                {/* ─── Mobile View (Cards) ─── */}
-                                <div className="d-lg-none">
-                                    <div className="d-flex flex-column gap-3">
+                {organizers.length === 0 ? (
+                    <div style={{ ...P.card, textAlign: 'center', padding: '80px 24px' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '16px', opacity: 0.2 }}>🔭</div>
+                        <h4 style={{ fontWeight: 800, color: '#1e1b2e', marginBottom: '8px' }}>No organizers detected.</h4>
+                        <p style={{ color: '#6b7280', margin: 0 }}>The registry is currently empty. Incoming host nodes will appear here.</p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Desktop Table */}
+                        <div className="d-none d-lg-block mb-5">
+                            <div style={{ ...P.card, padding: 0, overflow: 'hidden' }}>
+                                <Table className="m-0 align-middle">
+                                    <thead>
+                                        <tr style={{ background: '#f8f7fc', borderBottom: '1.5px solid #ede8f4' }}>
+                                            {['Organizer Node', 'Mobile Number', 'Active Events', 'Engagement', 'Management'].map((h, i) => (
+                                                <th key={i} style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', border: 'none', textAlign: i >= 2 ? 'center' : 'left', textAlignLast: i === 4 ? 'right' : undefined }}>
+                                                    {h}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
                                         {organizers.map((org) => (
-                                            <Card key={org._id} className="border-0 shadow-sm rounded-4 p-3 bg-white mobile-organizer-card-item">
-                                                <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-3 pb-3 border-bottom border-slate-100 gap-3">
-                                                    <Link to={`/admin/bookings/${org._id}`} className="text-decoration-none d-flex align-items-center gap-3 overflow-hidden w-100">
-                                                        <div className="avatar-gradient-pink text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm fw-bold flex-shrink-0" style={{ width: '45px', height: '45px', minWidth: '45px' }}>
+                                            <tr key={org._id}
+                                                style={{ borderTop: '1px solid #f3f4f6', transition: 'background .2s' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = '#faf5ff'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                            >
+                                                <td style={{ padding: '16px 20px', border: 'none' }}>
+                                                    <Link to={`/admin/bookings/${org._id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                                        <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg,#e9d5ff,#c4b5fd)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#6d28d9', flexShrink: 0 }}>
                                                             {org.name?.charAt(0).toUpperCase()}
                                                         </div>
-                                                        <div className="overflow-hidden">
-                                                            <h6 className="mb-0 fw-black text-dark text-truncate" style={{ fontSize: '0.95rem' }}>{org.name}</h6>
-                                                            <span className="small text-secondary fw-medium text-truncate d-block">{org.email}</span>
+                                                        <div>
+                                                            <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.9rem' }}>{org.name}</div>
+                                                            <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{org.email}</div>
                                                         </div>
                                                     </Link>
-                                                    <Button 
-                                                        as={Link} 
-                                                        to={`/admin/bookings/${org._id}`}
-                                                        className="btn-pink-outline rounded-pill px-3 py-2 fw-bold transition-all d-flex justify-content-center align-items-center gap-2 flex-shrink-0 w-100 w-sm-auto"
-                                                        style={{ fontSize: '0.8rem' }}
+                                                </td>
+                                                <td style={{ padding: '16px 20px', border: 'none', textAlign: 'center' }}>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>{org.phone || 'N/A'}</span>
+                                                </td>
+                                                <td style={{ padding: '16px 20px', border: 'none', textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e1b2e', lineHeight: 1 }}>{org.totalEvents}</div>
+                                                    <div style={{ fontSize: '0.62rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '3px' }}>Units</div>
+                                                </td>
+                                                <td style={{ padding: '16px 20px', border: 'none', textAlign: 'center' }}>
+                                                    <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: '999px', padding: '6px 14px', fontSize: '0.72rem', fontWeight: 700 }}>
+                                                        <FaTicketAlt style={{ marginRight: '5px', fontSize: '0.65rem' }} />{org.totalBookings} Attendees
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '16px 20px', border: 'none', textAlign: 'right' }}>
+                                                    <Button as={Link} to={`/admin/bookings/${org._id}`}
+                                                        style={{ background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 600, fontSize: '0.78rem', padding: '8px 18px', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(139,92,246,.2)' }}
                                                     >
-                                                        Events <FaChevronRight size={10} />
+                                                        Events <FaChevronRight size={9} />
                                                     </Button>
-                                                </div>
-                                                
-                                                <div className="d-grid bg-slate-50 p-2 rounded-3" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
-                                                    <div className="d-flex flex-column align-items-center text-center">
-                                                        <span className="text-secondary small fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>Phone</span>
-                                                        <span className="small text-dark fw-bold text-truncate w-100 px-1" style={{ fontSize: '0.75rem' }}>{org.phone || 'N/A'}</span>
-                                                    </div>
-                                                    <div className="d-flex flex-column align-items-center text-center border-start border-end border-slate-200 px-1">
-                                                        <span className="text-secondary small fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>Events</span>
-                                                        <span className="small text-dark fw-bold text-truncate w-100 px-1" style={{ fontSize: '0.75rem' }}>{org.totalEvents} Units</span>
-                                                    </div>
-                                                    <div className="d-flex flex-column align-items-center text-center">
-                                                        <span className="text-secondary small fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>Guests</span>
-                                                        <Badge className="bg-success-subtle text-success border border-success-light rounded-pill px-2 py-1 fw-bold text-truncate" style={{ fontSize: '0.65rem', maxWidth: '100%' }}>
-                                                            {org.totalBookings}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-                                            </Card>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </div>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="d-lg-none d-flex flex-column gap-3 mb-5">
+                            {organizers.map((org) => (
+                                <div key={org._id} style={{ ...P.card, padding: '20px', position: 'relative', overflow: 'hidden' }}>
+                                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg,#d946ef,#8b5cf6)' }} />
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', gap: '12px', flexWrap: 'wrap' }}>
+                                        <Link to={`/admin/bookings/${org._id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px', flex: 1, overflow: 'hidden' }}>
+                                            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg,#e9d5ff,#c4b5fd)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#6d28d9', flexShrink: 0 }}>
+                                                {org.name?.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div style={{ overflow: 'hidden' }}>
+                                                <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{org.name}</div>
+                                                <div style={{ fontSize: '0.72rem', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{org.email}</div>
+                                            </div>
+                                        </Link>
+                                        <Button as={Link} to={`/admin/bookings/${org._id}`}
+                                            style={{ background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 600, fontSize: '0.75rem', padding: '8px 16px', display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}
+                                        >
+                                            Events <FaChevronRight size={9} />
+                                        </Button>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', background: '#f8f7fc', borderRadius: '14px', padding: '12px' }}>
+                                        {[
+                                            { label: 'Phone', value: org.phone || 'N/A' },
+                                            { label: 'Events', value: `${org.totalEvents} Units` },
+                                            { label: 'Guests', value: org.totalBookings },
+                                        ].map((item, i) => (
+                                            <div key={i} style={{ textAlign: 'center', borderRight: i < 2 ? '1px solid #ede8f4' : 'none', paddingRight: i < 2 ? '8px' : 0 }}>
+                                                <div style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9ca3af', marginBottom: '4px' }}>{item.label}</div>
+                                                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e1b2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.value}</div>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
-
-                            </>
-                        )}
-                    </Col>
-                </Row>
+                            ))}
+                        </div>
+                    </>
+                )}
             </Container>
         </div>
     );

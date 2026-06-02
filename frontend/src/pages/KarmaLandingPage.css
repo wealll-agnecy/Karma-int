@@ -346,7 +346,7 @@ body {
   width: 100%;
   justify-content: space-between;
   align-items: stretch;
-  margin: 5px 0 30px;
+  margin: 5px 0 13px;
   gap: 15px;
 }
 
@@ -2663,7 +2663,7 @@ body {
   }
 
   .about-ki-img {
-    height: 300px;
+    height: 450px;
   }
 
   .tnc-inquiries {

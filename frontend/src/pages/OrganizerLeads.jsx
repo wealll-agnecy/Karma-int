@@ -1,21 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Badge, Table, Spinner, Tabs, Tab } from 'react-bootstrap';
-import { FaUserPlus, FaFire, FaEnvelope, FaPhone, FaPhoneAlt, FaCheckCircle, FaTimesCircle, FaStar, FaClock } from 'react-icons/fa';
+import { Container, Card, Table, Badge, Button, Spinner, Modal, Tab, Tabs } from 'react-bootstrap';
+import { FaUserPlus, FaEnvelope, FaPhone, FaFire, FaCheckCircle, FaClock, FaStar, FaTimesCircle } from 'react-icons/fa';
 import { getLeads, updateLead } from '../api/organizerApi';
 import toast from 'react-hot-toast';
-import '../css/dashboard.css';
 
-const getStatusColor = (statusValue) => {
-    switch (statusValue) {
-        case 'new': return '#3b82f6'; // Blue
-        case 'calling': return '#f97316'; // Orange
-        case 'interested': return '#22c55e'; // Green
-        case 'follow_up': return '#a855f7'; // Purple
-        case 'not_interested': return '#ef4444'; // Red
-        case 'contacted': return '#06b6d4'; // Cyan
-        case 'converted': return '#14b8a6'; // Teal
-        case 'lost': return '#64748b'; // Gray
-        default: return '#94a3b8'; // Light Gray
+const P = {
+    page: { minHeight: '100vh', background: 'linear-gradient(160deg,#fdf7ff 0%,#f5f0fb 50%,#faf7fb 100%)', padding: '0 0 60px' },
+    card: { background: 'rgba(255,255,255,0.97)', border: '1px solid #ede8f4', borderRadius: '22px', boxShadow: '0 8px 32px rgba(100,60,180,0.07)', transition: 'all .3s ease', padding: '24px' },
+    label: { fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#9ca3af', display: 'block', marginBottom: '8px' },
+    input: { border: '1.5px solid #ede8f4', borderRadius: '12px', background: '#f8f7fc', padding: '10px 14px', fontSize: '0.85rem', outline: 'none', width: '100%', color: '#1e1b2e' },
+};
+
+const getStatusColor = (status) => {
+    switch (status) {
+        case 'new': return '#3b82f6';
+        case 'calling': return '#eab308';
+        case 'contacted': return '#0ea5e9';
+        case 'interested': return '#22c55e';
+        case 'not_interested': return '#64748b';
+        case 'follow_up': return '#8b5cf6';
+        case 'converted': return '#10b981';
+        case 'lost': return '#ef4444';
+        default: return '#94a3b8';
     }
 };
 
@@ -23,71 +29,56 @@ const OrganizerLeads = () => {
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('new');
-
     const [selectedLead, setSelectedLead] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [status, setStatus] = useState('new');
-    const [followupDate, setFollowupDate] = useState('');
     const [note, setNote] = useState('');
+    const [followupDate, setFollowupDate] = useState('');
     const [saving, setSaving] = useState(false);
 
     const fetchLeads = async () => {
         try {
+            setLoading(true);
             const res = await getLeads();
             if (res.data.success) {
-                setLeads(res.data.leads || []);
+                setLeads(res.data.data || res.data.leads || []);
             }
         } catch (err) {
-            toast.error('Failed to fetch leads');
+            toast.error('Failed to load leads data');
         } finally {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        fetchLeads();
-    }, []);
+    useEffect(() => { fetchLeads(); }, []);
 
     const handleManageLead = (lead) => {
         setSelectedLead(lead);
         setStatus(lead.leadStatus || 'new');
-        
+        setNote('');
         if (lead.followupDate) {
             const d = new Date(lead.followupDate);
-            // Format to YYYY-MM-DDTHH:mm
             const tzOffset = d.getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16);
+            const localISOTime = new Date(d - tzOffset).toISOString().slice(0, 16);
             setFollowupDate(localISOTime);
         } else {
             setFollowupDate('');
         }
-        
-        setNote('');
         setShowModal(true);
     };
 
     const handleSaveLead = async () => {
-        if (!selectedLead) return;
         setSaving(true);
         try {
             const data = { leadStatus: status };
-            if (status === 'follow_up' && followupDate) {
-                data.followupDate = new Date(followupDate).toISOString();
-            }
-            if (note.trim()) {
-                data.note = note.trim();
-            }
+            if (note.trim()) data.note = note.trim();
+            if (status === 'follow_up' && followupDate) data.followupDate = new Date(followupDate).toISOString();
             const res = await updateLead(selectedLead._id, data);
             if (res.data.success) {
                 toast.success('Lead updated successfully');
                 setShowModal(false);
-                fetchLeads(); // refresh
+                fetchLeads();
             }
-        } catch (err) {
-            toast.error('Failed to update lead');
-        } finally {
-            setSaving(false);
-        }
+        } catch (err) { toast.error('Failed to update lead'); } finally { setSaving(false); }
     };
 
     const newLeads = leads.filter(lead => lead.paymentStatus === 'pending' && (!lead.leadStatus || lead.leadStatus === 'new'));
@@ -99,459 +90,272 @@ const OrganizerLeads = () => {
     const followUpLeads = leads.filter(lead => lead.leadStatus === 'follow_up' || lead.leadStatus === 'not_contacted');
 
     return (
-        <div className="dashboard-page">
-            <Container fluid className="px-md-5 pt-4 pb-5">
-                <div className="dashboard-header mb-4">
-                    <h2 className="dashboard-title-main mb-1 d-flex align-items-center gap-3">
-                        <FaUserPlus className="text-pink" /> Leads Management
-                    </h2>
-                    <p className="dashboard-subtext m-0">Track attendees who initiated checkout but haven't fully paid.</p>
+        <div style={P.page}>
+            <Container fluid style={{ maxWidth: '1400px', padding: '0 24px' }}>
+                <div style={{ padding: '40px 0 28px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: '8px' }}>Organizer Portal</div>
+                    <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 800, letterSpacing: '-1.5px', color: '#1e1b2e', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <FaUserPlus color="#d946ef" size={28} /> Leads Management
+                    </h1>
+                    <p style={{ color: '#6b7280', marginTop: '6px', marginBottom: 0, fontSize: '0.9rem' }}>
+                        Track attendees who initiated checkout but haven't fully paid.
+                    </p>
                 </div>
 
                 {loading ? (
-                    <div className="d-flex justify-content-center py-5">
-                        <Spinner animation="border" variant="pink" />
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+                        <Spinner animation="border" style={{ color: '#8b5cf6', width: '2.5rem', height: '2.5rem' }} />
                     </div>
                 ) : (
-                    <Card className="dashboard-card border-0 shadow-sm">
-                        <Card.Body className="p-4">
-                            {/* Mobile Dropdown (Visible only on small screens) */}
-                            <div className="d-md-none mb-4">
-                                <label className="form-label text-muted fw-semibold small mb-2">FILTER LEADS</label>
-                                <select 
-                                    className="form-select border-0 shadow-sm fw-bold"
-                                    style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '12px 16px' }}
-                                    value={activeTab}
-                                    onChange={(e) => setActiveTab(e.target.value)}
-                                >
-                                    <option value="new">New Leads ({newLeads.length})</option>
-                                    <option value="hot">Hot Leads ({hotLeads.length})</option>
-                                    <option value="calling">Calling ({callingLeads.length})</option>
-                                    <option value="contacted">Contacted ({contactedLeads.length})</option>
-                                    <option value="follow_up">Follow-up ({followUpLeads.length})</option>
-                                    <option value="interested">Interested ({interestedLeads.length})</option>
-                                    <option value="not_interested">Not Interested ({notInterestedLeads.length})</option>
-                                </select>
-                            </div>
+                    <div style={{ ...P.card, padding: 0 }}>
+                        <div className="d-md-none" style={{ padding: '20px' }}>
+                            <label style={P.label}>FILTER LEADS</label>
+                            <select style={P.input} value={activeTab} onChange={(e) => setActiveTab(e.target.value)}>
+                                <option value="new">New Leads ({newLeads.length})</option>
+                                <option value="hot">Hot Leads ({hotLeads.length})</option>
+                                <option value="calling">Calling ({callingLeads.length})</option>
+                                <option value="contacted">Contacted ({contactedLeads.length})</option>
+                                <option value="follow_up">Follow-up ({followUpLeads.length})</option>
+                                <option value="interested">Interested ({interestedLeads.length})</option>
+                                <option value="not_interested">Not Interested ({notInterestedLeads.length})</option>
+                            </select>
+                        </div>
 
-                            {/* Desktop Tabs (Hidden nav on mobile) */}
-                            <Tabs 
-                                activeKey={activeTab}
-                                onSelect={(k) => setActiveTab(k)}
-                                id="leads-tabs" 
-                                className="mb-4 custom-tabs leads-mobile-tabs d-none d-md-flex" 
-                            >
-                                <Tab 
-                                    eventKey="new" 
-                                    title={
-                                        <span className="text-nowrap">
-                                            <FaUserPlus className="me-2" /> 
-                                            New Leads <Badge bg="secondary" className="ms-1">{newLeads.length}</Badge>
-                                        </span>
-                                    }
-                                >
-                                    <div style={{ whiteSpace: 'normal' }}>
-                                        <LeadsTable leads={newLeads} type="new" onManage={handleManageLead} onUpdateLead={fetchLeads} />
-                                    </div>
-                                </Tab>
-                                <Tab 
-                                    eventKey="hot" 
-                                    title={
-                                        <span className="text-nowrap">
-                                            <FaFire className="me-2 text-danger" /> 
-                                            Hot Leads <Badge bg="danger" className="ms-1">{hotLeads.length}</Badge>
-                                        </span>
-                                    }
-                                >
-                                    <div style={{ whiteSpace: 'normal' }}>
-                                        <LeadsTable leads={hotLeads} type="hot" onManage={handleManageLead} onUpdateLead={fetchLeads} />
-                                    </div>
-                                </Tab>
-                                <Tab 
-                                    eventKey="calling" 
-                                    title={
-                                        <span className="text-nowrap">
-                                            <FaPhoneAlt className="me-2 text-warning" /> 
-                                            Calling <Badge bg="warning" text="dark" className="ms-1">{callingLeads.length}</Badge>
-                                        </span>
-                                    }
-                                >
-                                    <div style={{ whiteSpace: 'normal' }}>
-                                        <LeadsTable leads={callingLeads} type="calling" onManage={handleManageLead} onUpdateLead={fetchLeads} />
-                                    </div>
-                                </Tab>
-                                <Tab 
-                                    eventKey="contacted" 
-                                    title={
-                                        <span className="text-nowrap">
-                                            <FaCheckCircle className="me-2 text-info" /> 
-                                            Contacted <Badge bg="info" className="ms-1">{contactedLeads.length}</Badge>
-                                        </span>
-                                    }
-                                >
-                                    <div style={{ whiteSpace: 'normal' }}>
-                                        <LeadsTable leads={contactedLeads} type="contacted" onManage={handleManageLead} onUpdateLead={fetchLeads} />
-                                    </div>
-                                </Tab>
-                                <Tab 
-                                    eventKey="follow_up" 
-                                    title={
-                                        <span className="text-nowrap">
-                                            <FaClock className="me-2 text-primary" /> 
-                                            Follow-up <Badge bg="primary" className="ms-1">{followUpLeads.length}</Badge>
-                                        </span>
-                                    }
-                                >
-                                    <div style={{ whiteSpace: 'normal' }}>
-                                        <LeadsTable leads={followUpLeads} type="follow-up" onManage={handleManageLead} onUpdateLead={fetchLeads} />
-                                    </div>
-                                </Tab>
-                                <Tab 
-                                    eventKey="interested"  
-                                    title={
-                                        <span className="text-nowrap">
-                                            <FaStar className="me-2 text-success" /> 
-                                            Interested <Badge bg="success" className="ms-1">{interestedLeads.length}</Badge>
-                                        </span>
-                                    }
-                                >
-                                    <div style={{ whiteSpace: 'normal' }}>
-                                        <LeadsTable leads={interestedLeads} type="interested" onManage={handleManageLead} onUpdateLead={fetchLeads} />
-                                    </div>
-                                </Tab>
-                                <Tab 
-                                    eventKey="not_interested" 
-                                    title={
-                                        <span className="text-nowrap">
-                                            <FaTimesCircle className="me-2 text-secondary" /> 
-                                            Not Interested <Badge bg="secondary" className="ms-1">{notInterestedLeads.length}</Badge>
-                                        </span>
-                                    }
-                                >
-                                    <div style={{ whiteSpace: 'normal' }}>
-                                        <LeadsTable leads={notInterestedLeads} type="not interested" onManage={handleManageLead} onUpdateLead={fetchLeads} />
-                                    </div>
-                                </Tab>
-                            </Tabs>
-                        </Card.Body>
-                    </Card>
-                )}
+                        <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k)} className="d-none d-md-flex custom-premium-tabs px-4 pt-4" style={{ borderBottom: '1.5px solid #ede8f4' }}>
+                            <Tab eventKey="new" title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem' }}><FaUserPlus /> New <Badge bg="secondary" style={{ borderRadius: '6px' }}>{newLeads.length}</Badge></span>}>
+                                <LeadsTable leads={newLeads} onManage={handleManageLead} onUpdateLead={fetchLeads} />
+                            </Tab>
+                            <Tab eventKey="hot" title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem', color: '#ef4444' }}><FaFire /> Hot <Badge bg="danger" style={{ borderRadius: '6px' }}>{hotLeads.length}</Badge></span>}>
+                                <LeadsTable leads={hotLeads} onManage={handleManageLead} onUpdateLead={fetchLeads} />
+                            </Tab>
+                            <Tab eventKey="calling" title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem', color: '#eab308' }}><FaPhone /> Calling <Badge bg="warning" text="dark" style={{ borderRadius: '6px' }}>{callingLeads.length}</Badge></span>}>
+                                <LeadsTable leads={callingLeads} onManage={handleManageLead} onUpdateLead={fetchLeads} />
+                            </Tab>
+                            <Tab eventKey="contacted" title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem', color: '#0ea5e9' }}><FaCheckCircle /> Contacted <Badge bg="info" style={{ borderRadius: '6px' }}>{contactedLeads.length}</Badge></span>}>
+                                <LeadsTable leads={contactedLeads} onManage={handleManageLead} onUpdateLead={fetchLeads} />
+                            </Tab>
+                            <Tab eventKey="follow_up" title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem', color: '#8b5cf6' }}><FaClock /> Follow-up <Badge bg="primary" style={{ borderRadius: '6px' }}>{followUpLeads.length}</Badge></span>}>
+                                <LeadsTable leads={followUpLeads} onManage={handleManageLead} onUpdateLead={fetchLeads} />
+                            </Tab>
+                            <Tab eventKey="interested" title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem', color: '#22c55e' }}><FaStar /> Interested <Badge bg="success" style={{ borderRadius: '6px' }}>{interestedLeads.length}</Badge></span>}>
+                                <LeadsTable leads={interestedLeads} onManage={handleManageLead} onUpdateLead={fetchLeads} />
+                            </Tab>
+                            <Tab eventKey="not_interested" title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.85rem', color: '#64748b' }}><FaTimesCircle /> Not Interested <Badge bg="secondary" style={{ borderRadius: '6px' }}>{notInterestedLeads.length}</Badge></span>}>
+                                <LeadsTable leads={notInterestedLeads} onManage={handleManageLead} onUpdateLead={fetchLeads} />
+                            </Tab>
+                        </Tabs>
 
-                {/* Lead Management Modal */}
-                {selectedLead && (
-                    <div className={`modal fade ${showModal ? 'show d-block' : ''}`} style={{ backgroundColor: 'rgba(17, 24, 39, 0.4)', backdropFilter: 'blur(8px)', transition: 'opacity 0.3s ease' }} tabIndex="-1">
-                        <div className="modal-dialog modal-dialog-centered modal-lg" style={{ transform: showModal ? 'scale(1)' : 'scale(0.95)', transition: 'transform 0.3s ease' }}>
-                            <div className="modal-content border-0 bg-white" style={{ borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', overflow: 'hidden' }}>
-                                <div className="modal-header border-bottom border-light px-4 py-3 bg-light" style={{ borderTopLeftRadius: '24px', borderTopRightRadius: '24px' }}>
-                                    <h5 className="modal-title d-flex align-items-center fw-bold" style={{ color: '#111827', fontSize: '1.1rem' }}>
-                                        <FaStar className="text-warning me-2" /> Lead Action Center
-                                    </h5>
-                                    <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
-                                </div>
-                                <div className="modal-body p-4" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
-                                    <div className="row g-4">
-                                        {/* Left Column: Attendee Info */}
-                                        <div className="col-lg-5">
-                                            <div className="p-4 bg-white" style={{ borderRadius: '16px', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                                                <div className="d-flex align-items-center mb-4">
-                                                    <div className="d-flex align-items-center justify-content-center text-white fw-bold me-3 shadow-sm" style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', fontSize: '1.2rem', flexShrink: 0 }}>
-                                                        {((selectedLead.attendeeDetails?.[0]?.name || selectedLead.user?.name || 'N A').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase())}
-                                                    </div>
-                                                    <div style={{ minWidth: 0 }}>
-                                                        <h4 className="mb-1 fw-bold text-truncate" style={{ fontSize: '18px', color: '#111827' }}>{selectedLead.attendeeDetails?.[0]?.name || selectedLead.user?.name || 'N/A'}</h4>
-                                                        <Badge style={{ backgroundColor: getStatusColor(selectedLead.leadStatus || 'new'), color: '#fff', fontWeight: '500', letterSpacing: '0.5px' }} className="px-2 py-1">
-                                                            {(selectedLead.leadStatus || 'new').replace('_', ' ').toUpperCase()}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="mb-4">
-                                                    <div className="d-flex align-items-center mb-2">
-                                                        <FaEnvelope className="text-muted me-2" style={{ width: '16px' }} />
-                                                        <span className="text-truncate" style={{ color: '#374151', fontSize: '0.95rem' }}>{selectedLead.attendeeDetails?.[0]?.email || selectedLead.contactEmail || selectedLead.user?.email || 'N/A'}</span>
-                                                    </div>
-                                                    <div className="d-flex align-items-center">
-                                                        <FaPhone className="text-muted me-2" style={{ width: '16px' }} />
-                                                        <span style={{ color: '#374151', fontSize: '0.95rem' }}>{selectedLead.attendeeDetails?.[0]?.phone || selectedLead.user?.phone || 'N/A'}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-4 border-top" style={{ borderColor: 'rgba(0,0,0,0.05)' }}>
-                                                    <h6 className="text-muted fw-semibold mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Interested Event</h6>
-                                                    <p className="mb-3 fw-medium" style={{ color: '#111827', fontSize: '0.95rem', lineHeight: '1.4' }}>{selectedLead.event?.title || 'N/A'}</p>
-                                                    
-                                                    <div className="d-flex justify-content-between align-items-center mb-3">
-                                                        <div>
-                                                            <h6 className="text-muted fw-semibold mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Package</h6>
-                                                            <Badge bg="light" text="dark" className="border px-2 py-1 fw-medium">{selectedLead.ticketType}</Badge>
-                                                        </div>
-                                                        <div className="text-end">
-                                                            <h6 className="text-muted fw-semibold mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Amount</h6>
-                                                            <span className="fw-bold" style={{ color: '#111827', fontSize: '1.05rem' }}>₹{selectedLead.totalAmount}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="d-flex align-items-center justify-content-between">
-                                                        <h6 className="text-muted fw-semibold mb-0" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Payment Status</h6>
-                                                        <Badge bg={selectedLead.paymentStatus === 'completed' ? 'success' : selectedLead.paymentStatus === 'partial' ? 'warning' : 'danger'} className="px-2 py-1 shadow-sm">
-                                                            {selectedLead.paymentStatus?.toUpperCase() || 'PENDING'}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Right Column: Actions */}
-                                        <div className="col-lg-7 d-flex flex-column">
-                                            <div className="mb-4">
-                                                <label className="form-label text-muted fw-semibold mb-2" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>UPDATE LEAD STATUS</label>
-                                                <select 
-                                                    className="form-select border-0 shadow-sm"
-                                                    style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '0.75rem 1rem', color: '#111827', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                    value={status}
-                                                    onChange={(e) => setStatus(e.target.value)}
-                                                >
-                                                    <option value="new">New Lead</option>
-                                                    <option value="calling">Calling</option>
-                                                    <option value="contacted">Contacted</option>
-                                                    <option value="interested">Interested</option>
-                                                    <option value="not_interested">Not Interested</option>
-                                                    <option value="follow_up">Follow-up Required</option>
-                                                    <option value="converted">Converted (Paid)</option>
-                                                    <option value="lost">Lost</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="mb-4">
-                                                <label className="form-label text-muted fw-semibold mb-2" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>CALL NOTES</label>
-                                                <textarea 
-                                                    className="form-control border-0 shadow-sm" 
-                                                    rows="3" 
-                                                    style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '1rem', color: '#111827', resize: 'none', transition: 'all 0.2s' }}
-                                                    placeholder="e.g., Requested a callback tomorrow. Seems interested in the VIP package."
-                                                    value={note}
-                                                    onChange={(e) => setNote(e.target.value)}
-                                                ></textarea>
-                                            </div>
-
-                                            {status === 'follow_up' && (
-                                                <div className="mb-4">
-                                                    <label className="form-label text-muted fw-semibold mb-2" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>SCHEDULE FOLLOW-UP</label>
-                                                    <input 
-                                                        type="datetime-local" 
-                                                        className="form-control border-0 shadow-sm"
-                                                        style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '0.75rem 1rem', color: '#111827', transition: 'all 0.2s' }}
-                                                        value={followupDate}
-                                                        onChange={(e) => setFollowupDate(e.target.value)}
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {selectedLead.leadNotes && selectedLead.leadNotes.length > 0 && (
-                                                <div className="mt-auto">
-                                                    <div className="d-flex align-items-center mb-3 pt-2">
-                                                        <h6 className="text-muted fw-semibold mb-0" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Recent History</h6>
-                                                        <div className="ms-3 flex-grow-1" style={{ height: '1px', backgroundColor: '#e5e7eb' }}></div>
-                                                    </div>
-                                                    <div className="d-flex flex-column gap-3 pe-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                                        {selectedLead.leadNotes.slice().reverse().map((n, i) => (
-                                                            <div key={i} className="d-flex gap-3">
-                                                                <div className="mt-1">
-                                                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getStatusColor(n.statusAtTime), boxShadow: '0 0 0 3px rgba(0,0,0,0.03)' }}></div>
-                                                                </div>
-                                                                <div className="flex-grow-1 pb-3" style={i !== selectedLead.leadNotes.length - 1 ? { borderBottom: '1px solid #f3f4f6' } : {}}>
-                                                                    <div className="d-flex justify-content-between align-items-center mb-1">
-                                                                        <span className="fw-bold text-dark small text-capitalize">{n.statusAtTime?.replace('_', ' ') || 'Note'}</span>
-                                                                        <span className="text-muted" style={{ fontSize: '0.75rem' }}>{new Date(n.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                                                                    </div>
-                                                                    <p className="mb-0 text-secondary" style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>{n.note}</p>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="modal-footer border-top px-4 py-3 bg-light sticky-bottom d-flex justify-content-end gap-2" style={{ borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', borderColor: 'rgba(0,0,0,0.05)' }}>
-                                    <button type="button" className="btn btn-outline-secondary px-4 fw-semibold" style={{ borderRadius: '12px', padding: '0.6rem 1rem', transition: 'all 0.2s' }} onClick={() => setShowModal(false)}>Cancel</button>
-                                    <button type="button" className="btn text-white px-5 fw-semibold border-0 d-flex justify-content-center align-items-center" 
-                                        style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #fb923c 100%)', borderRadius: '12px', padding: '0.6rem 1rem', boxShadow: '0 4px 10px rgba(244, 63, 94, 0.3)', minWidth: '140px', transition: 'all 0.2s' }} 
-                                        onClick={handleSaveLead} disabled={saving}>
-                                        {saving ? <Spinner size="sm" className="me-2" /> : 'Save Update'}
-                                    </button>
-                                </div>
-                            </div>
+                        {/* Mobile Lists corresponding to activeTab */}
+                        <div className="d-block d-md-none p-3">
+                            {activeTab === 'new' && <LeadsListMobile leads={newLeads} onManage={handleManageLead} />}
+                            {activeTab === 'hot' && <LeadsListMobile leads={hotLeads} onManage={handleManageLead} />}
+                            {activeTab === 'calling' && <LeadsListMobile leads={callingLeads} onManage={handleManageLead} />}
+                            {activeTab === 'contacted' && <LeadsListMobile leads={contactedLeads} onManage={handleManageLead} />}
+                            {activeTab === 'follow_up' && <LeadsListMobile leads={followUpLeads} onManage={handleManageLead} />}
+                            {activeTab === 'interested' && <LeadsListMobile leads={interestedLeads} onManage={handleManageLead} />}
+                            {activeTab === 'not_interested' && <LeadsListMobile leads={notInterestedLeads} onManage={handleManageLead} />}
                         </div>
                     </div>
                 )}
+
+                {/* Lead Action Modal */}
+                <Modal show={showModal} onHide={() => setShowModal(false)} centered size="lg">
+                    <Modal.Header closeButton style={{ borderBottom: '1px solid #ede8f4', padding: '24px' }}>
+                        <Modal.Title style={{ fontWeight: 700, fontSize: '1.2rem', color: '#1e1b2e', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <FaStar color="#eab308" /> Lead Action Center
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body style={{ padding: '0', background: '#fdf7ff' }}>
+                        {selectedLead && (
+                            <div className="d-flex flex-column flex-lg-row">
+                                <div style={{ flex: 1, padding: '24px', borderRight: '1px solid #ede8f4', background: '#fff' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#e9d5ff,#c4b5fd)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6d28d9', fontWeight: 800, fontSize: '1.4rem' }}>
+                                            {((selectedLead.attendeeDetails?.[0]?.name || selectedLead.user?.name || 'N A')[0]).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <h4 style={{ fontWeight: 800, color: '#1e1b2e', margin: '0 0 4px 0', fontSize: '1.1rem' }}>
+                                                {selectedLead.attendeeDetails?.[0]?.name || selectedLead.user?.name || 'N/A'}
+                                            </h4>
+                                            <Badge style={{ background: getStatusColor(selectedLead.leadStatus || 'new'), fontSize: '0.65rem', padding: '4px 8px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                                {(selectedLead.leadStatus || 'new').replace('_', ' ')}
+                                            </Badge>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#4b5563', fontSize: '0.85rem' }}>
+                                            <FaEnvelope color="#8b5cf6" /> {selectedLead.attendeeDetails?.[0]?.email || selectedLead.contactEmail || selectedLead.user?.email || 'N/A'}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#4b5563', fontSize: '0.85rem' }}>
+                                            <FaPhone color="#8b5cf6" /> {selectedLead.attendeeDetails?.[0]?.phone || selectedLead.user?.phone || 'N/A'}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ borderTop: '1px solid #ede8f4', paddingTop: '20px' }}>
+                                        <h6 style={P.label}>Interested Event</h6>
+                                        <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.9rem', marginBottom: '16px' }}>{selectedLead.event?.title || 'N/A'}</div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', background: '#f8f7fc', padding: '12px', borderRadius: '12px' }}>
+                                            <div>
+                                                <div style={P.label}>Package</div>
+                                                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#4b5563' }}>{selectedLead.ticketType}</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={P.label}>Amount</div>
+                                                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#1e1b2e' }}>₹{selectedLead.totalAmount}</div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={P.label}>Payment Status</div>
+                                            <Badge bg={selectedLead.paymentStatus === 'completed' ? 'success' : selectedLead.paymentStatus === 'partial' ? 'warning' : 'danger'} style={{ fontSize: '0.65rem', padding: '4px 8px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                                {selectedLead.paymentStatus || 'PENDING'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ flex: 1.2, padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={P.label}>Update Lead Status</label>
+                                        <select style={P.input} value={status} onChange={(e) => setStatus(e.target.value)}>
+                                            <option value="new">New Lead</option>
+                                            <option value="calling">Calling</option>
+                                            <option value="contacted">Contacted</option>
+                                            <option value="interested">Interested</option>
+                                            <option value="not_interested">Not Interested</option>
+                                            <option value="follow_up">Follow-up Required</option>
+                                            <option value="converted">Converted (Paid)</option>
+                                            <option value="lost">Lost</option>
+                                        </select>
+                                    </div>
+
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={P.label}>Call Notes</label>
+                                        <textarea style={{ ...P.input, resize: 'none' }} rows="3" placeholder="e.g., Requested a callback tomorrow." value={note} onChange={(e) => setNote(e.target.value)} />
+                                    </div>
+
+                                    {status === 'follow_up' && (
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <label style={P.label}>Schedule Follow-up</label>
+                                            <input type="datetime-local" style={P.input} value={followupDate} onChange={(e) => setFollowupDate(e.target.value)} />
+                                        </div>
+                                    )}
+
+                                    {selectedLead.leadNotes && selectedLead.leadNotes.length > 0 && (
+                                        <div style={{ marginTop: 'auto' }}>
+                                            <h6 style={{ ...P.label, borderBottom: '1px solid #ede8f4', paddingBottom: '8px', marginBottom: '12px' }}>Recent History</h6>
+                                            <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                {selectedLead.leadNotes.slice().reverse().map((n, i) => (
+                                                    <div key={i} style={{ display: 'flex', gap: '12px' }}>
+                                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: getStatusColor(n.statusAtTime), marginTop: '4px', flexShrink: 0 }} />
+                                                        <div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#1e1b2e', textTransform: 'capitalize' }}>{n.statusAtTime?.replace('_', ' ') || 'Note'}</span>
+                                                                <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{new Date(n.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                                            </div>
+                                                            <div style={{ fontSize: '0.8rem', color: '#4b5563', lineHeight: 1.4 }}>{n.note}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </Modal.Body>
+                    <Modal.Footer style={{ borderTop: '1px solid #ede8f4', padding: '16px 24px', background: '#fff' }}>
+                        <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: '1.5px solid #ede8f4', borderRadius: '12px', color: '#6b7280', fontWeight: 600, fontSize: '0.85rem', padding: '10px 20px', cursor: 'pointer' }}>Cancel</button>
+                        <button onClick={handleSaveLead} disabled={saving} style={{ background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '10px 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(139,92,246,.25)' }}>
+                            {saving ? <Spinner size="sm" /> : 'Save Update'}
+                        </button>
+                    </Modal.Footer>
+                </Modal>
             </Container>
         </div>
     );
 };
 
-const LeadsTable = ({ leads, type, onManage, onUpdateLead }) => {
-    return (
-        <>
-            {/* Desktop Table View */}
-            <div className="table-responsive d-none d-lg-block">
-                <Table hover className="align-middle text-nowrap">
-                    <thead className="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th>Attendee Name</th>
-                            <th>Contact Info</th>
-                            <th>Lead Status</th>
-                            <th>Latest Action</th>
-                            <th></th>
+const LeadsTable = ({ leads, onManage }) => (
+    <div className="d-none d-md-block">
+        {leads.length === 0 ? (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#9ca3af' }}>No leads found in this category.</div>
+        ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                    <tr style={{ background: '#f8f7fc', borderBottom: '1.5px solid #ede8f4' }}>
+                        <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'left' }}>Date</th>
+                        <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'left' }}>Attendee</th>
+                        <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'left' }}>Contact Info</th>
+                        <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'left' }}>Latest Action</th>
+                        <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'right' }}>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {leads.map(lead => (
+                        <tr key={lead._id} style={{ borderTop: '1px solid #f3f4f6', transition: 'background .2s' }} onMouseEnter={e => e.currentTarget.style.background = '#faf5ff'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <td style={{ padding: '16px 20px', fontSize: '0.85rem', color: '#4b5563', fontWeight: 600 }}>{new Date(lead.createdAt).toLocaleDateString()}</td>
+                            <td style={{ padding: '16px 20px', fontSize: '0.85rem', color: '#1e1b2e', fontWeight: 700 }}>{lead.attendeeDetails?.[0]?.name || lead.user?.name || 'N/A'}</td>
+                            <td style={{ padding: '16px 20px' }}>
+                                <div style={{ fontSize: '0.75rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}><FaEnvelope color="#a78bfa" /> {lead.attendeeDetails?.[0]?.email || lead.contactEmail || lead.user?.email || 'N/A'}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}><FaPhone color="#a78bfa" /> {lead.attendeeDetails?.[0]?.phone || lead.user?.phone || 'N/A'}</div>
+                            </td>
+                            <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                                <Badge style={{ background: getStatusColor(lead.leadStatus || 'new'), fontSize: '0.65rem', padding: '6px 12px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                    {(lead.leadStatus || 'new').replace('_', ' ')}
+                                </Badge>
+                            </td>
+                            <td style={{ padding: '16px 20px', fontSize: '0.8rem', color: '#6b7280', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {lead.leadNotes?.[lead.leadNotes.length - 1]?.note || 'No action yet'}
+                            </td>
+                            <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                                <button onClick={() => onManage(lead)} style={{ background: 'transparent', border: '1.5px solid #d946ef', borderRadius: '8px', color: '#d946ef', fontWeight: 700, fontSize: '0.75rem', padding: '6px 14px', cursor: 'pointer', transition: 'all .2s' }} onMouseEnter={e => e.currentTarget.style.background = '#fdf4ff'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    UPDATE
+                                </button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {leads.length === 0 ? (
-                            <tr>
-                                <td colSpan="6" className="text-center py-5 text-muted">
-                                    No {type} leads found.
-                                </td>
-                            </tr>
-                        ) : (
-                            leads.map(lead => <LeadRow key={lead._id} lead={lead} type={type} onManage={onManage} onUpdateLead={onUpdateLead} />)
-                        )}
-                    </tbody>
-                </Table>
-            </div>
+                    ))}
+                </tbody>
+            </table>
+        )}
+    </div>
+);
 
-            {/* Mobile List View */}
-            <div className="d-block d-lg-none mt-2">
-                {leads.length === 0 ? (
-                    <div className="text-center py-5 text-muted">
-                        No {type} leads found.
+const LeadsListMobile = ({ leads, onManage }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {leads.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>No leads found.</div>
+        ) : (
+            leads.map(lead => (
+                <div key={lead._id} style={{ background: '#fff', border: '1.5px solid #ede8f4', borderRadius: '16px', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <div>
+                            <div style={{ fontWeight: 800, color: '#1e1b2e', fontSize: '0.95rem' }}>{lead.attendeeDetails?.[0]?.name || lead.user?.name || 'N/A'}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{new Date(lead.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <Badge style={{ background: getStatusColor(lead.leadStatus || 'new'), fontSize: '0.6rem', padding: '4px 8px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                            {(lead.leadStatus || 'new').replace('_', ' ')}
+                        </Badge>
                     </div>
-                ) : (
-                    <div className="list-group list-group-flush rounded-3 border border-secondary bg-dark">
-                        {leads.map(lead => <LeadCard key={lead._id} lead={lead} type={type} onManage={onManage} onUpdateLead={onUpdateLead} />)}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '8px' }}><FaEnvelope color="#a78bfa" /> {lead.attendeeDetails?.[0]?.email || lead.contactEmail || lead.user?.email || 'N/A'}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '8px' }}><FaPhone color="#a78bfa" /> {lead.attendeeDetails?.[0]?.phone || lead.user?.phone || 'N/A'}</div>
                     </div>
-                )}
-            </div>
-        </>
-    );
-};
-
-const LeadRow = ({ lead, type, onManage, onUpdateLead }) => {
-    const [status, setStatus] = useState(lead.leadStatus || 'new');
-    const [note, setNote] = useState('');
-    const [saving, setSaving] = useState(false);
-
-    const name = lead.attendeeDetails?.[0]?.name || lead.user?.name || 'N/A';
-    const email = lead.attendeeDetails?.[0]?.email || lead.contactEmail || lead.user?.email || 'N/A';
-    const phone = lead.attendeeDetails?.[0]?.phone || lead.user?.phone || 'N/A';
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            const data = { leadStatus: status };
-            if (note.trim()) {
-                data.note = note.trim();
-            }
-            const res = await updateLead(lead._id, data);
-            if (res.data.success) {
-                toast.success('Lead updated successfully');
-                if (onUpdateLead) onUpdateLead();
-            }
-        } catch (err) {
-            toast.error('Failed to update lead');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    return (
-        <tr>
-            <td>{new Date(lead.createdAt).toLocaleDateString()}</td>
-            <td className="fw-semibold">{name}</td>
-            <td>
-                <div className="small"><FaEnvelope className="me-1 text-muted" /> {email}</div>
-                <div className="small"><FaPhone className="me-1 text-muted" /> {phone}</div>
-            </td>
-            <td>
-                <Badge bg="secondary" className="px-3 py-2 text-capitalize">{lead.leadStatus?.replace('_', ' ') || 'New'}</Badge>
-            </td>
-            <td>
-                <div className="text-truncate text-muted small" style={{ maxWidth: '180px' }} title={lead.leadNotes?.[lead.leadNotes.length - 1]?.note || 'No action yet'}>
-                    {lead.leadNotes?.[lead.leadNotes.length - 1]?.note || 'No action yet'}
-                </div>
-            </td>
-            <td className="text-end">
-                <button 
-                    className="btn btn-sm btn-pink text-white rounded px-4 fw-bold shadow-sm"
-                    onClick={() => onManage(lead)}
-                >
-                    UPDATE
-                </button>
-            </td>
-        </tr>
-    );
-};
-
-const LeadCard = ({ lead, type, onManage, onUpdateLead }) => {
-    const [status, setStatus] = useState(lead.leadStatus || 'new');
-    const [note, setNote] = useState('');
-    const [saving, setSaving] = useState(false);
-
-    const name = lead.attendeeDetails?.[0]?.name || lead.user?.name || 'N/A';
-    const email = lead.attendeeDetails?.[0]?.email || lead.contactEmail || lead.user?.email || 'N/A';
-    const phone = lead.attendeeDetails?.[0]?.phone || lead.user?.phone || 'N/A';
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            const data = { leadStatus: status };
-            if (note.trim()) {
-                data.note = note.trim();
-            }
-            const res = await updateLead(lead._id, data);
-            if (res.data.success) {
-                toast.success('Lead updated successfully');
-                if (onUpdateLead) onUpdateLead();
-            }
-        } catch (err) {
-            toast.error('Failed to update lead');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    return (
-        <div className="list-group-item bg-white text-dark border-light shadow-sm mb-2 rounded-3 py-3 px-3">
-            <div className="d-flex justify-content-between align-items-start mb-2 gap-2">
-                <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="fw-bold text-truncate">{name}</div>
-                    <div className="small text-muted mt-1 d-flex flex-column gap-1">
-                        <span className="text-truncate"><FaPhone size={10} className="me-1"/>{phone}</span>
-                        <span className="text-truncate"><FaEnvelope size={10} className="me-1"/>{email}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px dashed #ede8f4' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {lead.leadNotes?.[lead.leadNotes.length - 1]?.note || 'No action yet'}
+                        </div>
+                        <button onClick={() => onManage(lead)} style={{ background: '#fdf4ff', border: '1px solid #fbcfe8', borderRadius: '8px', color: '#d946ef', fontWeight: 700, fontSize: '0.75rem', padding: '6px 14px', cursor: 'pointer' }}>
+                            UPDATE
+                        </button>
                     </div>
                 </div>
-                <div className="text-end flex-shrink-0">
-                    <div className="small text-muted" style={{fontSize: '0.7rem'}}>{new Date(lead.createdAt).toLocaleDateString()}</div>
-                </div>
-            </div>
-
-            <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary gap-2">
-                <div className="d-flex flex-column gap-1" style={{ minWidth: 0 }}>
-                    <Badge bg="secondary" className="text-capitalize align-self-start px-2 py-1">{lead.leadStatus?.replace('_', ' ') || 'New'}</Badge>
-                    <span className="text-truncate text-muted small" title={lead.leadNotes?.[lead.leadNotes.length - 1]?.note || 'No action yet'}>
-                        {lead.leadNotes?.[lead.leadNotes.length - 1]?.note || 'No action yet'}
-                    </span>
-                </div>
-                <button 
-                    className="btn btn-sm btn-pink text-white px-3 py-1 fw-bold rounded shadow-sm flex-shrink-0"
-                    onClick={() => onManage(lead)}
-                >
-                    UPDATE
-                </button>
-            </div>
-        </div>
-    );
-};
+            ))
+        )}
+    </div>
+);
 
 export default OrganizerLeads;

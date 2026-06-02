@@ -98,7 +98,7 @@ router.get('/leads', authorize('organizer', 'staff'), async (req, res) => {
         .sort({ createdAt: -1 })
         .lean();
 
-        res.status(200).json({ success: true, count: leads.length, leads });
+        res.status(200).json({ success: true, count: leads.length, data: leads });
     } catch (err) {
         console.error("Leads API Error:", err);
         res.status(500).json({ success: false, message: err.message });

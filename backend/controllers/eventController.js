@@ -58,7 +58,7 @@ exports.getEvent = async (req, res, next) => {
 exports.getMyEvents = async (req, res, next) => {
     try {
         const events = await Event.find()
-            .select('title date status isLive category ticketTypes multiDayPlan isMultiDay endDate foodSettings addonsSettings')
+            .select('title date venue status isLive category ticketTypes multiDayPlan isMultiDay endDate foodSettings addonsSettings')
             .lean();
 
         res.status(200).json({

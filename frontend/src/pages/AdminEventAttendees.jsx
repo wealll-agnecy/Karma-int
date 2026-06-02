@@ -1,14 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Badge, Spinner, Modal, Table } from 'react-bootstrap';
 import { FaUser, FaEnvelope, FaPhone, FaTicketAlt, FaCalendarDay, FaWallet, FaArrowLeft, FaSearch, FaUsers, FaEye, FaFileExcel } from 'react-icons/fa';
 import { formatCurrency } from '../utils/formatUtils';
 import * as analyticsApi from '../api/analyticsApi';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import PremiumSearchBar from '../components/common/PremiumSearchBar';
-import '../css/AdminStyles.css';
+
+const P = {
+    page: { minHeight: '100vh', background: 'linear-gradient(160deg,#fdf7ff 0%,#f5f0fb 50%,#faf7fb 100%)', padding: '0 0 60px' },
+    card: { background: 'rgba(255,255,255,0.97)', border: '1px solid #ede8f4', borderRadius: '22px', boxShadow: '0 8px 32px rgba(100,60,180,0.07)', transition: 'all .3s ease', overflow: 'hidden' },
+    statCard: (active, accent) => ({ background: '#fff', border: `1.5px solid ${active ? accent : '#ede8f4'}`, borderRadius: '18px', padding: '20px', cursor: 'pointer', boxShadow: active ? `0 8px 24px ${accent}20` : '0 4px 12px rgba(0,0,0,0.02)', transition: 'all .2s' }),
+    label: { fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: '#9ca3af', display: 'block', marginBottom: '8px' },
+};
 
 const AdminEventAttendees = () => {
     const { eventId } = useParams();
@@ -21,15 +25,11 @@ const AdminEventAttendees = () => {
     const [selectedBooking, setSelectedBooking] = useState(null);
 
     useEffect(() => {
-        if (!eventId || eventId === 'undefined') {
-            setLoading(false);
-            return;
-        }
+        if (!eventId || eventId === 'undefined') { setLoading(false); return; }
         const fetchAttendees = async () => {
             try {
                 const res = await analyticsApi.getEventAttendees(eventId);
                 const rawData = res.data?.data || [];
-                // Since a booking can have multiple attendees, we flatten them
                 const flattened = rawData.flatMap(booking => 
                     (booking.attendeeDetails || []).map(attendee => ({
                         ...attendee,
@@ -48,26 +48,22 @@ const AdminEventAttendees = () => {
             } catch (err) {
                 console.error('Error fetching attendees:', err);
                 toast.error('Failed to load attendee list');
-            } finally {
-                setLoading(false);
-            }
+            } finally { setLoading(false); }
         };
         fetchAttendees();
     }, [eventId]);
 
     const filteredAttendees = attendees.filter(a => {
-        const matchesSearch = a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             a.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             a.phone?.includes(searchTerm);
-        
-        const matchesFilter = filterType === 'all' || a.plan?.toLowerCase() === filterType;
-        
+        const matchesSearch = (a.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             (a.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             (a.phone || '').includes(searchTerm);
+        const matchesFilter = filterType === 'all' || (a.plan || '').toLowerCase() === filterType;
         return matchesSearch && matchesFilter;
     });
 
-    const silverCount = attendees.filter(a => a.plan?.toLowerCase() === 'silver').length;
-    const goldCount = attendees.filter(a => a.plan?.toLowerCase() === 'gold').length;
-    const platinumCount = attendees.filter(a => a.plan?.toLowerCase() === 'platinum').length;
+    const silverCount = attendees.filter(a => (a.plan || '').toLowerCase() === 'silver').length;
+    const goldCount = attendees.filter(a => (a.plan || '').toLowerCase() === 'gold').length;
+    const platinumCount = attendees.filter(a => (a.plan || '').toLowerCase() === 'platinum').length;
 
     const handleShowDetails = (attendee) => {
         const booking = attendee.rawBooking || {};
@@ -98,482 +94,301 @@ const AdminEventAttendees = () => {
             'Amount Paid': attendee.amountPaid,
             'Total Order': attendee.totalAmount
         }));
-
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Attendees");
         XLSX.writeFile(wb, `Attendees_${eventId}.xlsx`);
     };
 
-    if (loading) {
-        return (
-            <div className="d-flex justify-content-center align-items-center vh-100 bg-premium-light">
-                <Spinner animation="border" variant="pink" />
-            </div>
-        );
-    }
+    if (loading) return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#fdf7ff' }}>
+            <Spinner animation="border" style={{ color: '#8b5cf6', width: '2.5rem', height: '2.5rem' }} />
+        </div>
+    );
 
     return (
-        <div className="dashboard-page bg-premium-light pb-5">
-            <Container fluid className="px-md-5 py-4">
-                {/* Header Section */}
-                <div className="mb-5 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
-                    <div className="d-flex align-items-center gap-4">
-                        <button 
-                            onClick={() => navigate(-1)} 
-                            className="avatar-gradient-pink rounded-circle d-flex align-items-center justify-content-center border-0 shadow-sm transition-premium hover-translate-y text-white"
-                            style={{ width: '56px', height: '56px', flexShrink: 0 }}
+        <div style={P.page}>
+            <Container fluid style={{ maxWidth: '1400px', padding: '0 24px' }}>
+                {/* Header */}
+                <div style={{ padding: '40px 0 28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                        <button onClick={() => navigate(-1)}
+                            style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', boxShadow: '0 6px 20px rgba(139,92,246,.25)', flexShrink: 0 }}
                         >
-                            <FaArrowLeft size={20} style={{ color: 'white' }} />
+                            <FaArrowLeft size={18} />
                         </button>
                         <div>
-                            <div className="d-flex align-items-center gap-2 mb-1">
-                                <span className="badge-pink-soft px-3 py-1 rounded-pill small fw-bold text-uppercase tracking-wider">Attendee Registry</span>
-                            </div>
-                             <h2 className="dashboard-title-main text-dark fw-black tracking-tighter m-0 d-flex align-items-center gap-3" style={{ fontSize: '2.2rem' }}>
-                                 <FaUsers className="text-pink d-none d-lg-inline-flex" /> Event Guests
-                             </h2>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: '6px' }}>Attendee Registry</div>
+                            <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.5rem)', fontWeight: 800, letterSpacing: '-1px', color: '#1e1b2e', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <FaUsers color="#d946ef" size={28} /> Event Guests
+                            </h1>
                         </div>
                     </div>
                     
-                    <div className="d-flex align-items-center gap-3">
-                        <Button 
-                            variant="success" 
-                            className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
-                            onClick={handleExportExcel}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <button onClick={handleExportExcel}
+                            style={{ background: '#10b981', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: 600, fontSize: '0.85rem', padding: '12px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(16,185,129,0.2)' }}
                         >
-                            <FaFileExcel /> <span className="d-none d-md-inline">Excel</span>
-                        </Button>
-                        <PremiumSearchBar 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{ minWidth: '250px' }}
-                        />
+                            <FaFileExcel /> Excel
+                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#fff', border: '1.5px solid #ede8f4', borderRadius: '14px', padding: '10px 16px', boxShadow: '0 4px 16px rgba(100,60,180,0.06)' }}>
+                            <FaSearch color="#9ca3af" size={13} />
+                            <input type="text" placeholder="Search guests..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                                style={{ border: 'none', outline: 'none', fontSize: '0.85rem', color: '#374151', background: 'transparent', width: '200px' }} />
+                        </div>
                     </div>
                 </div>
 
-                {/* Statistics Summary */}
-                <Row className="mb-4 g-3">
-                    <Col xs={6} md={6} lg>
-                        <Card 
-                            className={`border-0 shadow-sm rounded-4 p-3 bg-white h-100 cursor-pointer attendee-stat-card transition-all ${filterType === 'all' ? 'ring-pink' : ''}`}
-                            onClick={() => setFilterType('all')}
-                        >
-                            <div className="d-flex align-items-center gap-3">
-                                <div className="icon-box-premium rounded-4 d-flex align-items-center justify-content-center" style={{ width: '45px', height: '45px' }}>
-                                    <FaUsers size={18} />
-                                </div>
-                                <div>
-                                    <h6 className="text-secondary tiny-text fw-bold text-uppercase mb-1">Attendees</h6>
-                                    <h5 className="fw-black mb-0">{attendees.length}</h5>
-                                </div>
+                {/* Stats */}
+                <Row className="g-3 mb-4">
+                    <Col xs={6} lg>
+                        <div style={P.statCard(filterType === 'all', '#8b5cf6')} onClick={() => setFilterType('all')}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f5f3ff', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaUsers /></div>
+                                <div><div style={P.label}>Attendees</div><div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e1b2e' }}>{attendees.length}</div></div>
                             </div>
-                        </Card>
+                        </div>
                     </Col>
-                    <Col xs={6} md={6} lg>
-                        <Card className="border-0 shadow-sm rounded-4 p-3 bg-white h-100 attendee-stat-card">
-                            <div className="d-flex align-items-center gap-3">
-                                <div className="icon-box-premium rounded-4 d-flex align-items-center justify-content-center bg-success-subtle text-success" style={{ width: '45px', height: '45px' }}>
-                                    <FaWallet size={18} />
-                                </div>
-                                <div>
-                                    <h6 className="text-secondary tiny-text fw-bold text-uppercase mb-1">Revenue</h6>
-                                    <h5 className="fw-black mb-0">₹{attendees.reduce((acc, a) => acc + (a.amountPaid / (attendees.filter(at => at.bookingId === a.bookingId).length || 1)), 0).toLocaleString()}</h5>
-                                </div>
+                    <Col xs={6} lg>
+                        <div style={{ ...P.statCard(false, '#10b981'), cursor: 'default' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#d1fae5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaWallet /></div>
+                                <div><div style={P.label}>Revenue</div><div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e1b2e' }}>₹{attendees.reduce((acc, a) => acc + (a.amountPaid / (attendees.filter(at => at.bookingId === a.bookingId).length || 1)), 0).toLocaleString()}</div></div>
                             </div>
-                        </Card>
+                        </div>
                     </Col>
-                    <Col xs={4} md={4} lg>
-                        <Card 
-                            className={`border-0 shadow-sm rounded-4 p-3 bg-white h-100 cursor-pointer attendee-stat-card transition-all ${filterType === 'silver' ? 'ring-pink' : ''}`}
-                            onClick={() => setFilterType('silver')}
-                        >
-                            <div className="d-flex align-items-center gap-3">
-                                <div className="icon-box-premium rounded-4 d-flex align-items-center justify-content-center bg-secondary-subtle text-secondary" style={{ width: '45px', height: '45px' }}>
-                                    <FaTicketAlt size={18} />
-                                </div>
-                                <div>
-                                    <h6 className="text-secondary tiny-text fw-bold text-uppercase mb-1">Silver</h6>
-                                    <h5 className="fw-black mb-0">{silverCount}</h5>
-                                </div>
+                    <Col xs={4} lg>
+                        <div style={P.statCard(filterType === 'silver', '#94a3b8')} onClick={() => setFilterType('silver')}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaTicketAlt /></div>
+                                <div><div style={P.label}>Silver</div><div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e1b2e' }}>{silverCount}</div></div>
                             </div>
-                        </Card>
+                        </div>
                     </Col>
-                    <Col xs={4} md={4} lg>
-                        <Card 
-                            className={`border-0 shadow-sm rounded-4 p-3 bg-white h-100 cursor-pointer attendee-stat-card transition-all ${filterType === 'gold' ? 'ring-pink' : ''}`}
-                            onClick={() => setFilterType('gold')}
-                        >
-                            <div className="d-flex align-items-center gap-3">
-                                <div className="icon-box-premium rounded-4 d-flex align-items-center justify-content-center bg-warning-subtle text-warning" style={{ width: '45px', height: '45px' }}>
-                                    <FaTicketAlt size={18} />
-                                </div>
-                                <div>
-                                    <h6 className="text-secondary tiny-text fw-bold text-uppercase mb-1">Gold</h6>
-                                    <h5 className="fw-black mb-0">{goldCount}</h5>
-                                </div>
+                    <Col xs={4} lg>
+                        <div style={P.statCard(filterType === 'gold', '#eab308')} onClick={() => setFilterType('gold')}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef9c3', color: '#ca8a04', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaTicketAlt /></div>
+                                <div><div style={P.label}>Gold</div><div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e1b2e' }}>{goldCount}</div></div>
                             </div>
-                        </Card>
+                        </div>
                     </Col>
-                    <Col xs={4} md={4} lg>
-                        <Card 
-                            className={`border-0 shadow-sm rounded-4 p-3 bg-white h-100 cursor-pointer attendee-stat-card transition-all ${filterType === 'platinum' ? 'ring-pink' : ''}`}
-                            onClick={() => setFilterType('platinum')}
-                        >
-                            <div className="d-flex align-items-center gap-3">
-                                <div className="icon-box-premium rounded-4 d-flex align-items-center justify-content-center bg-primary-subtle text-primary" style={{ width: '45px', height: '45px' }}>
-                                    <FaTicketAlt size={18} />
-                                </div>
-                                <div>
-                                    <h6 className="text-secondary tiny-text fw-bold text-uppercase mb-1">Platinum</h6>
-                                    <h5 className="fw-black mb-0">{platinumCount}</h5>
-                                </div>
+                    <Col xs={4} lg>
+                        <div style={P.statCard(filterType === 'platinum', '#3b82f6')} onClick={() => setFilterType('platinum')}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaTicketAlt /></div>
+                                <div><div style={P.label}>Platinum</div><div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e1b2e' }}>{platinumCount}</div></div>
                             </div>
-                        </Card>
+                        </div>
                     </Col>
                 </Row>
 
-                {/* Attendee Table (Desktop View) */}
-                <Card className="border-0 shadow-sm rounded-5 overflow-hidden bg-white d-none d-lg-block">
-                    <div className="table-responsive">
-                        <Table hover className="align-middle mb-0 custom-premium-table">
+                {/* Desktop Table */}
+                <div className="d-none d-lg-block" style={P.card}>
+                    {filteredAttendees.length === 0 ? (
+                        <div style={{ padding: '80px 24px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '3rem', opacity: 0.2, marginBottom: '16px' }}>👤</div>
+                            <h5 style={{ fontWeight: 700, color: '#1e1b2e' }}>No attendees found</h5>
+                        </div>
+                    ) : (
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr>
-                                    <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest">Attendee</th>
-                                    <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest">Contact Info</th>
-                                    <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Ticket Type</th>
-                                    <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Booking Date</th>
-                                    <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-center">Amount Paid</th>
-                                    <th className="px-4 py-4 text-secondary small fw-black text-uppercase tracking-widest text-end">Action</th>
+                                <tr style={{ background: '#f8f7fc', borderBottom: '1.5px solid #ede8f4' }}>
+                                    <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'left' }}>Attendee</th>
+                                    <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'left' }}>Contact Info</th>
+                                    <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'center' }}>Ticket Type</th>
+                                    <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'center' }}>Booking Date</th>
+                                    <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'center' }}>Amount Paid</th>
+                                    <th style={{ padding: '16px 20px', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', textAlign: 'right' }}>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredAttendees.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="6" className="text-center py-5">
-                                            <div className="display-1 mb-4 opacity-10">👤</div>
-                                            <h5 className="text-secondary fw-bold">No attendees found matching your search.</h5>
+                                {filteredAttendees.map((attendee, idx) => (
+                                    <tr key={idx} style={{ borderTop: '1px solid #f3f4f6', transition: 'background .2s' }} onMouseEnter={e => e.currentTarget.style.background = '#faf5ff'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                        <td style={{ padding: '16px 20px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#e9d5ff,#c4b5fd)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#6d28d9', flexShrink: 0 }}>
+                                                    {(attendee.name || 'G')[0].toUpperCase()}
+                                                </div>
+                                                <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.9rem' }}>{attendee.name}</div>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '16px 20px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '0.8rem', marginBottom: '4px' }}><FaEnvelope color="#d946ef" /> {attendee.email}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '0.8rem' }}><FaPhone color="#d946ef" /> {attendee.phone}</div>
+                                        </td>
+                                        <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                                            <span style={{ background: '#f8f7fc', border: '1px solid #ede8f4', borderRadius: '999px', padding: '6px 12px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#374151' }}>
+                                                {attendee.ticketType}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                                            <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.85rem' }}>{new Date(attendee.bookingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                                            <div style={{ color: '#9ca3af', fontSize: '0.7rem' }}>{new Date(attendee.bookingDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                                        </td>
+                                        <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                                            <div style={{ fontWeight: 800, color: '#10b981', fontSize: '0.95rem' }}>₹{attendee.amountPaid.toLocaleString()}</div>
+                                            <div style={{ color: '#9ca3af', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase' }}>Total: ₹{attendee.totalAmount}</div>
+                                        </td>
+                                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                                            <button onClick={() => handleShowDetails(attendee)} style={{ background: 'transparent', border: 'none', color: '#d946ef', cursor: 'pointer', padding: '4px' }}>
+                                                <FaEye size={16} />
+                                            </button>
                                         </td>
                                     </tr>
-                                ) : (
-                                    filteredAttendees.map((attendee, idx) => (
-                                        <tr key={idx} className="transition-all hover-bg-slate-50 border-bottom border-slate-100">
-                                            <td className="px-4 py-4">
-                                                <div className="d-flex align-items-center gap-3">
-                                                    <div className="avatar-gradient-pink text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm fw-bold" style={{ width: '45px', height: '45px' }}>
-                                                        {attendee.name?.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <h6 className="mb-0 fw-black text-dark">{attendee.name}</h6>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <div className="d-flex flex-column gap-1">
-                                                    <div className="d-flex align-items-center gap-2 small text-secondary fw-medium">
-                                                        <FaEnvelope className="text-pink" size={12} />
-                                                        {attendee.email}
-                                                    </div>
-                                                    <div className="d-flex align-items-center gap-2 small text-secondary fw-medium">
-                                                        <FaPhone className="text-pink" size={12} />
-                                                        {attendee.phone}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <Badge className="bg-light text-dark border border-slate-200 rounded-pill px-3 py-2 fw-bold small text-uppercase">
-                                                    <FaCalendarDay className="me-2 text-pink" />
-                                                    {attendee.ticketType}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="small fw-bold text-dark mb-0">
-                                                    {new Date(attendee.bookingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                </div>
-                                                <div className="small text-secondary" style={{ fontSize: '0.65rem' }}>
-                                                    {new Date(attendee.bookingDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="fw-black text-dark h6 mb-0">₹{attendee.amountPaid.toLocaleString()}</div>
-                                                <div className="small text-secondary fw-bold" style={{ fontSize: '0.65rem' }}>TOTAL ORDER: ₹{attendee.totalAmount}</div>
-                                            </td>
-                                            <td className="px-4 py-4 text-end">
-                                                <Button 
-                                                    variant="link" 
-                                                    className="p-0 text-pink shadow-none"
-                                                    onClick={() => handleShowDetails(attendee)}
-                                                >
-                                                    <FaEye size={18} />
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
+                                ))}
                             </tbody>
-                        </Table>
-                    </div>
-                </Card>
+                        </table>
+                    )}
+                </div>
 
-                {/* Attendee Mobile Cards View */}
+                {/* Mobile Cards View */}
                 <div className="d-lg-none">
                     {filteredAttendees.length === 0 ? (
-                        <Card className="border-0 shadow-sm rounded-5 text-center py-5 bg-white mb-4">
-                            <Card.Body className="py-5">
-                                <div className="display-1 mb-4 opacity-10">👤</div>
-                                <h5 className="text-secondary fw-bold">No attendees found matching your search.</h5>
-                            </Card.Body>
-                        </Card>
+                        <div style={{ ...P.card, padding: '40px 24px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '3rem', opacity: 0.2, marginBottom: '16px' }}>👤</div>
+                            <h5 style={{ fontWeight: 700, color: '#1e1b2e' }}>No attendees found</h5>
+                        </div>
                     ) : (
-                        <div className="d-flex flex-column gap-3">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {filteredAttendees.map((attendee, idx) => (
-                                <Card key={idx} className="border-0 shadow-sm rounded-4 p-3 bg-white mobile-attendee-card-item">
-                                    <div className="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom border-slate-100">
-                                        <div className="d-flex align-items-center gap-3">
-                                            <div className="avatar-gradient-pink text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm fw-bold" style={{ width: '45px', height: '45px', minWidth: '45px' }}>
-                                                {attendee.name?.charAt(0).toUpperCase()}
+                                <div key={idx} style={P.card}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #ede8f4' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#e9d5ff,#c4b5fd)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#6d28d9', flexShrink: 0 }}>
+                                                {(attendee.name || 'G')[0].toUpperCase()}
                                             </div>
-                                            <div className="overflow-hidden">
-                                                <h6 className="mb-0 fw-black text-dark text-truncate" style={{ fontSize: '0.95rem' }}>{attendee.name}</h6>
-                                                <span className="small text-secondary fw-semibold uppercase tracking-wider" style={{ fontSize: '0.7rem' }}>
-                                                    {attendee.plan || 'Standard'} Plan
-                                                </span>
+                                            <div>
+                                                <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.9rem' }}>{attendee.name}</div>
+                                                <div style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{attendee.plan || 'Standard'} Plan</div>
                                             </div>
                                         </div>
-                                        <div className="d-flex align-items-center gap-2">
-                                            <Button 
-                                                variant="link" 
-                                                className="p-0 text-pink shadow-none"
-                                                onClick={() => handleShowDetails(attendee)}
-                                            >
-                                                <FaEye size={18} />
-                                            </Button>
-                                            <Badge className="bg-light text-dark border border-slate-200 rounded-pill px-3 py-2 fw-bold small text-uppercase flex-shrink-0">
-                                                {attendee.ticketType}
-                                            </Badge>
-                                        </div>
+                                        <button onClick={() => handleShowDetails(attendee)} style={{ background: '#f5f3ff', border: 'none', borderRadius: '10px', color: '#8b5cf6', padding: '8px', cursor: 'pointer' }}>
+                                            <FaEye size={14} />
+                                        </button>
                                     </div>
-                                    
-                                    <div className="d-flex flex-column gap-2 mb-3">
-                                        <div className="d-flex align-items-center gap-2 small text-secondary fw-medium">
-                                            <FaEnvelope className="text-pink flex-shrink-0" size={12} />
-                                            <span className="text-truncate">{attendee.email}</span>
-                                        </div>
-                                        <div className="d-flex align-items-center gap-2 small text-secondary fw-medium">
-                                            <FaPhone className="text-pink flex-shrink-0" size={12} />
-                                            <span>{attendee.phone}</span>
-                                        </div>
-                                        <div className="d-flex align-items-center gap-2 small text-secondary fw-medium">
-                                            <FaCalendarDay className="text-pink flex-shrink-0" size={12} />
-                                            <span>
-                                                {new Date(attendee.bookingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(attendee.bookingDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4b5563', fontSize: '0.8rem' }}><FaEnvelope color="#d946ef" size={12} /> {attendee.email}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4b5563', fontSize: '0.8rem' }}><FaPhone color="#d946ef" size={12} /> {attendee.phone}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4b5563', fontSize: '0.8rem' }}><FaCalendarDay color="#d946ef" size={12} /> {new Date(attendee.bookingDate).toLocaleDateString()}</div>
                                     </div>
-
-                                    <div className="d-flex align-items-center justify-content-between pt-2 border-top border-slate-100">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px dashed #ede8f4' }}>
                                         <div>
-                                            <span className="text-secondary small fw-bold text-uppercase d-block mb-0.5" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>Total Order</span>
-                                            <div className="small text-secondary fw-bold">₹{attendee.totalAmount}</div>
+                                            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Order</div>
+                                            <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.85rem' }}>₹{attendee.totalAmount}</div>
                                         </div>
-                                        <div className="text-end">
-                                            <span className="text-secondary small fw-bold text-uppercase d-block mb-0.5" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>Paid Amount</span>
-                                            <div className="fw-black text-pink h6 mb-0">₹{attendee.amountPaid.toLocaleString()}</div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount Paid</div>
+                                            <div style={{ fontWeight: 800, color: '#10b981', fontSize: '1rem' }}>₹{attendee.amountPaid.toLocaleString()}</div>
                                         </div>
                                     </div>
-                                </Card>
+                                </div>
                             ))}
                         </div>
                     )}
                 </div>
 
-                {/* Attendee Details Modal */}
-                <Modal 
-                    show={showModal} 
-                    onHide={() => setShowModal(false)} 
-                    centered 
-                    size="lg"
-                    className="premium-details-modal"
-                >
-                    <Modal.Header closeButton style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <Modal.Title style={{ fontFamily: 'Outfit, sans-serif', fontWeight: '700' }}>
-                            Booking Details Summary
-                        </Modal.Title>
+                {/* Modal */}
+                <Modal show={showModal} onHide={() => setShowModal(false)} centered size="lg">
+                    <Modal.Header closeButton style={{ borderBottom: '1px solid #ede8f4', padding: '24px' }}>
+                        <Modal.Title style={{ fontWeight: 700, fontSize: '1.2rem', color: '#1e1b2e' }}>Booking Details</Modal.Title>
                     </Modal.Header>
-                    <Modal.Body style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                    <Modal.Body style={{ padding: '24px', background: '#fdf7ff' }}>
                         {selectedBooking && (
                             <div>
-                                {/* Section 1: Primary Attendee Info */}
-                                <div className="mb-4">
-                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Primary Attendee</h6>
-                                    <Row className="g-3">
-                                        <Col md={4}>
-                                            <div className="p-3 border rounded-3 bg-light">
-                                                <div className="text-muted small">Full Name</div>
-                                                <div className="fw-bold">{selectedBooking.attendeeName}</div>
-                                            </div>
-                                        </Col>
-                                        <Col md={4}>
-                                            <div className="p-3 border rounded-3 bg-light">
-                                                <div className="text-muted small">Email Address</div>
-                                                <div className="fw-bold text-truncate">{selectedBooking.email}</div>
-                                            </div>
-                                        </Col>
-                                        <Col md={4}>
-                                            <div className="p-3 border rounded-3 bg-light">
-                                                <div className="text-muted small">Phone Number</div>
-                                                <div className="fw-bold">{selectedBooking.phone || 'N/A'}</div>
-                                            </div>
-                                        </Col>
-                                    </Row>
-                                </div>
+                                <h6 style={P.label}>Primary Attendee</h6>
+                                <Row className="g-3 mb-4">
+                                    <Col md={4}><div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #ede8f4' }}><div style={{ fontSize: '0.7rem', color: '#9ca3af', marginBottom: '4px' }}>Name</div><div style={{ fontWeight: 700, color: '#1e1b2e' }}>{selectedBooking.attendeeName}</div></div></Col>
+                                    <Col md={4}><div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #ede8f4' }}><div style={{ fontSize: '0.7rem', color: '#9ca3af', marginBottom: '4px' }}>Email</div><div style={{ fontWeight: 700, color: '#1e1b2e' }}>{selectedBooking.email}</div></div></Col>
+                                    <Col md={4}><div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #ede8f4' }}><div style={{ fontSize: '0.7rem', color: '#9ca3af', marginBottom: '4px' }}>Phone</div><div style={{ fontWeight: 700, color: '#1e1b2e' }}>{selectedBooking.phone || 'N/A'}</div></div></Col>
+                                </Row>
 
-                                {/* Section 2: Booking Info */}
-                                <div className="mb-4 border-top pt-4">
-                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Booking & Plan Information</h6>
-                                    <Row className="g-3">
-                                        <Col md={6}>
-                                            <div className="p-3 border rounded-3 bg-light">
-                                                <div className="text-muted small">Event Name</div>
-                                                <div className="fw-bold text-pink">{selectedBooking.eventName}</div>
-                                            </div>
-                                        </Col>
-                                        <Col md={3}>
-                                            <div className="p-3 border rounded-3 bg-light">
-                                                <div className="text-muted small">Plan Type</div>
-                                                <div className="fw-bold">{selectedBooking.ticketTier}</div>
-                                            </div>
-                                        </Col>
-                                        <Col md={3}>
-                                            <div className="p-3 border rounded-3 bg-light">
-                                                <div className="text-muted small">Tickets Booked</div>
-                                                <div className="fw-black text-primary fs-5">
-                                                    {selectedBooking.bookedQuantity || 1} Ticket(s)
-                                                </div>
-                                            </div>
-                                        </Col>
-                                    </Row>
-                                </div>
+                                <h6 style={P.label}>Booking & Plan Information</h6>
+                                <Row className="g-3 mb-4">
+                                    <Col md={6}><div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #ede8f4' }}><div style={{ fontSize: '0.7rem', color: '#9ca3af', marginBottom: '4px' }}>Event Name</div><div style={{ fontWeight: 700, color: '#d946ef' }}>{selectedBooking.eventName}</div></div></Col>
+                                    <Col md={3}><div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #ede8f4' }}><div style={{ fontSize: '0.7rem', color: '#9ca3af', marginBottom: '4px' }}>Plan Type</div><div style={{ fontWeight: 700, color: '#1e1b2e' }}>{selectedBooking.ticketTier}</div></div></Col>
+                                    <Col md={3}><div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #ede8f4' }}><div style={{ fontSize: '0.7rem', color: '#9ca3af', marginBottom: '4px' }}>Tickets</div><div style={{ fontWeight: 800, color: '#8b5cf6', fontSize: '1.1rem' }}>{selectedBooking.bookedQuantity || 1}</div></div></Col>
+                                </Row>
 
-                                {/* Section 3: Group Members */}
-                                <div className="mb-4 border-top pt-4">
-                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Group Members ({selectedBooking.attendeeDetails?.length || 0})</h6>
+                                <h6 style={P.label}>Group Members ({selectedBooking.attendeeDetails?.length || 0})</h6>
+                                <div style={{ background: '#fff', border: '1px solid #ede8f4', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px' }}>
                                     {selectedBooking.attendeeDetails && selectedBooking.attendeeDetails.length > 0 ? (
-                                        <div className="table-responsive border rounded-3">
-                                            <Table hover className="m-0 align-middle">
-                                                <thead className="bg-light">
-                                                    <tr className="small text-uppercase fw-bold text-slate">
-                                                        <th className="px-3 py-2">#</th>
-                                                        <th className="py-2">Member Name</th>
-                                                        <th className="py-2">Phone / Contact</th>
-                                                        <th className="px-3 py-2">Email</th>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead style={{ background: '#f8f7fc' }}>
+                                                <tr>
+                                                    <th style={{ padding: '12px 16px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textAlign: 'left' }}>#</th>
+                                                    <th style={{ padding: '12px 16px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textAlign: 'left' }}>Member Name</th>
+                                                    <th style={{ padding: '12px 16px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textAlign: 'left' }}>Phone</th>
+                                                    <th style={{ padding: '12px 16px', fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textAlign: 'left' }}>Email</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {selectedBooking.attendeeDetails.map((m, i) => (
+                                                    <tr key={i} style={{ borderTop: '1px solid #ede8f4' }}>
+                                                        <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#6b7280' }}>{i + 1}</td>
+                                                        <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 700, color: '#1e1b2e' }}>{m.name}</td>
+                                                        <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#4b5563' }}>{m.phone || 'N/A'}</td>
+                                                        <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#4b5563' }}>{m.email || 'N/A'}</td>
                                                     </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {selectedBooking.attendeeDetails.map((member, index) => (
-                                                        <tr key={index}>
-                                                            <td className="px-3 py-2 text-muted small">{index + 1}</td>
-                                                            <td className="py-2 fw-bold">{member.name}</td>
-                                                            <td className="py-2">{member.phone || 'N/A'}</td>
-                                                            <td className="px-3 py-2 text-muted small">{member.email || 'N/A'}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </Table>
-                                        </div>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     ) : (
-                                        <div className="text-center py-3 text-muted border rounded-3 bg-light-subtle small">
-                                            No secondary group members added. Single ticket booking.
-                                        </div>
+                                        <div style={{ padding: '16px', textAlign: 'center', fontSize: '0.85rem', color: '#6b7280' }}>Single ticket booking.</div>
                                     )}
                                 </div>
 
-                                {/* Section 4: Food & Addons Selection (Conditional) */}
-                                {((selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0) || 
-                                  (selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0)) && (
-                                    <div className="mb-4 border-top pt-4">
-                                        <Row>
-                                            {selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 && (
-                                                <Col md={selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 ? 6 : 12}>
-                                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Food Orders</h6>
-                                                    <div className="table-responsive border rounded-3">
-                                                        <Table hover className="m-0 align-middle small">
-                                                            <thead className="bg-light">
-                                                                <tr>
-                                                                    <th className="px-3 py-2">Item</th>
-                                                                    <th className="py-2">Type</th>
-                                                                    <th className="px-3 py-2 text-end">Qty</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {selectedBooking.selectedFood.map((food, idx) => (
-                                                                    <tr key={idx}>
-                                                                        <td className="px-3 py-2 fw-bold">{food.itemName}</td>
-                                                                        <td className="py-2"><Badge bg={food.type === 'veg' ? 'success' : 'danger'}>{food.type}</Badge></td>
-                                                                        <td className="px-3 py-2 text-end">{food.quantity}</td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </Table>
+                                <Row className="g-3 mb-4">
+                                    {selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 && (
+                                        <Col md={6}>
+                                            <h6 style={P.label}>Food Orders</h6>
+                                            <div style={{ background: '#fff', border: '1px solid #ede8f4', borderRadius: '12px', padding: '12px' }}>
+                                                {selectedBooking.selectedFood.map((f, i) => (
+                                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < selectedBooking.selectedFood.length - 1 ? '1px solid #ede8f4' : 'none' }}>
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e1b2e' }}>{f.itemName} <span style={{ color: f.type === 'veg' ? '#10b981' : '#ef4444', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', background: f.type === 'veg' ? '#d1fae5' : '#fee2e2', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>{f.type}</span></span>
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>x{f.quantity}</span>
                                                     </div>
-                                                </Col>
-                                            )}
-
-                                            {selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 && (
-                                                <Col md={selectedBooking.selectedFood && selectedBooking.selectedFood.length > 0 ? 6 : 12}>
-                                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Addons / Goodies</h6>
-                                                    <div className="table-responsive border rounded-3">
-                                                        <Table hover className="m-0 align-middle small">
-                                                            <thead className="bg-light">
-                                                                <tr>
-                                                                    <th className="px-3 py-2">Item</th>
-                                                                    <th className="px-3 py-2 text-end">Qty</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {selectedBooking.selectedAddons.map((addon, idx) => (
-                                                                    <tr key={idx}>
-                                                                        <td className="px-3 py-2 fw-bold">{addon.itemName}</td>
-                                                                        <td className="px-3 py-2 text-end">{addon.quantity}</td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </Table>
+                                                ))}
+                                            </div>
+                                        </Col>
+                                    )}
+                                    {selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 && (
+                                        <Col md={6}>
+                                            <h6 style={P.label}>Addons / Goodies</h6>
+                                            <div style={{ background: '#fff', border: '1px solid #ede8f4', borderRadius: '12px', padding: '12px' }}>
+                                                {selectedBooking.selectedAddons.map((a, i) => (
+                                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < selectedBooking.selectedAddons.length - 1 ? '1px solid #ede8f4' : 'none' }}>
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e1b2e' }}>{a.itemName}</span>
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>x{a.quantity}</span>
                                                     </div>
-                                                </Col>
-                                            )}
-                                        </Row>
-                                    </div>
-                                )}
+                                                ))}
+                                            </div>
+                                        </Col>
+                                    )}
+                                </Row>
 
-                                {/* Section 5: Financial Summary */}
-                                <div className="border-top pt-4 mb-2">
-                                    <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Payment Summary</h6>
-                                    <div className="p-3 border rounded-3" style={{ background: 'linear-gradient(135deg, #fff 0%, #fef2f2 100%)' }}>
-                                        <Row className="g-3 text-center">
-                                            <Col xs={4}>
-                                                <div className="text-muted small">Total Cost</div>
-                                                <div className="fw-bold fs-5 text-dark">{formatCurrency(selectedBooking.totalAmount)}</div>
-                                            </Col>
-                                            <Col xs={4} className="border-start border-end">
-                                                <div className="text-muted small">Amount Paid</div>
-                                                <div className="fw-bold fs-5 text-success">{formatCurrency(selectedBooking.amountPaid)}</div>
-                                            </Col>
-                                            <Col xs={4}>
-                                                <div className="text-muted small">Outstanding Balance</div>
-                                                <div className={`fw-bold fs-5 ${selectedBooking.remainingAmount > 0 ? 'text-danger' : 'text-slate'}`}>
-                                                    {formatCurrency(selectedBooking.remainingAmount)}
-                                                </div>
-                                            </Col>
-                                        </Row>
-                                    </div>
+                                <h6 style={P.label}>Payment Summary</h6>
+                                <div style={{ background: 'linear-gradient(135deg, #fff 0%, #faf5ff 100%)', border: '1.5px solid #e9d5ff', borderRadius: '16px', padding: '20px' }}>
+                                    <Row className="g-3 text-center">
+                                        <Col xs={4}>
+                                            <div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Total Cost</div>
+                                            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e1b2e' }}>{formatCurrency(selectedBooking.totalAmount)}</div>
+                                        </Col>
+                                        <Col xs={4} style={{ borderLeft: '1px solid #e9d5ff', borderRight: '1px solid #e9d5ff' }}>
+                                            <div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Amount Paid</div>
+                                            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#10b981' }}>{formatCurrency(selectedBooking.amountPaid)}</div>
+                                        </Col>
+                                        <Col xs={4}>
+                                            <div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Outstanding</div>
+                                            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: selectedBooking.remainingAmount > 0 ? '#ef4444' : '#6b7280' }}>
+                                                {formatCurrency(selectedBooking.remainingAmount)}
+                                            </div>
+                                        </Col>
+                                    </Row>
                                 </div>
                             </div>
                         )}
                     </Modal.Body>
-                    <Modal.Footer style={{ borderTop: '1px solid #f1f5f9' }}>
-                        <Button variant="secondary" className="rounded-3 px-4 fw-bold" onClick={() => setShowModal(false)}>
-                            Close Details
-                        </Button>
-                    </Modal.Footer>
                 </Modal>
             </Container>
         </div>
