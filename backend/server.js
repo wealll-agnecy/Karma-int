@@ -5,6 +5,14 @@ dotenv.config({
     quiet: true 
 });
 
+// Validate required environment variables at startup
+const requiredEnv = ['MONGO_URI', 'JWT_SECRET', 'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS'];
+const missingEnv = requiredEnv.filter(key => !process.env[key]);
+if (missingEnv.length > 0) {
+    console.error(`🚨 [CRITICAL CONFIG ERROR] Missing required environment variables: ${missingEnv.join(', ')}`);
+    process.exit(1);
+}
+
 // Force UTF-8 for console output
 if (process.stdout.isTTY) {
     process.stdout.setEncoding('utf8');
@@ -17,9 +25,6 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
-
-// Connect to database
-connectDB();
 
 // Route files
 const authRoutes = require('./routes/authRoutes');
@@ -140,6 +145,14 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 app.use(express.json());
+// Gracefully handle malformed JSON payloads
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.error(`🚨 [BAD JSON PAYLOAD]: ${err.message}`);
+        return res.status(400).json({ success: false, message: 'Malformed JSON payload' });
+    }
+    next(err);
+});
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(cookieParser());
 
@@ -230,10 +243,26 @@ app.use((err, req, res, next) => {
     });
 });
 
-initScheduler();
+// --- STARTUP SEQUENCE ---
+const startServer = async () => {
+    try {
+        console.log('💾 Connecting to Database...');
+        await connectDB();
 
-console.log("✅ Event Routes Loaded:", eventRoutes.stack.filter(r => r.route).map(r => `${Object.keys(r.route.methods)} ${r.route.path}`));
-console.log("✅ Booking Routes Loaded:", bookingRoutes.stack.filter(r => r.route).map(r => `${Object.keys(r.route.methods)} ${r.route.path}`));
+        console.log('⏰ Initializing Scheduler...');
+        initScheduler();
+
+        console.log("✅ Event Routes Loaded:", eventRoutes.stack.filter(r => r.route).map(r => `${Object.keys(r.route.methods)} ${r.route.path}`));
+        console.log("✅ Booking Routes Loaded:", bookingRoutes.stack.filter(r => r.route).map(r => `${Object.keys(r.route.methods)} ${r.route.path}`));
+
+        server.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 [SERVER LIVE] [PORT: ${PORT}]`);
+        });
+    } catch (startupErr) {
+        console.error('🚨 [SERVER STARTUP CRASH]:', startupErr.message);
+        process.exit(1);
+    }
+};
 
 const PORT = process.env.PORT || 5002;
 
@@ -246,14 +275,58 @@ server.on('error', (e) => {
 
 // --- PRODUCTION SAFETY NET ---
 process.on('unhandledRejection', (err, promise) => {
-    console.error(`🚨 [UNHANDLED REJECTION]: ${err.message}`);
+    console.error(`🚨 [UNHANDLED REJECTION]:`, err);
 });
 
 process.on('uncaughtException', (err) => {
-    console.error(`🚨 [UNCAUGHT EXCEPTION]: ${err.message}`);
+    console.error(`🚨 [UNCAUGHT EXCEPTION]:`, err);
     process.exit(1); // Exit immediately; process manager (PM2) will restart
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 [SERVER LIVE] [PORT: ${PORT}]`);
-});
+// --- GRACEFUL SHUTDOWN HANDLING ---
+const gracefulShutdown = async (signal) => {
+    console.log(`\n🤖 [SHUTDOWN] Received ${signal}. Starting graceful shutdown...`);
+    
+    server.close(() => {
+        console.log('🚪 [SHUTDOWN] HTTP server closed.');
+    });
+
+    try {
+        // Disconnect Mongoose
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 0) {
+            await mongoose.disconnect();
+            console.log('💾 [SHUTDOWN] Mongoose connection closed.');
+        }
+
+        // Close Queues
+        try {
+            const notificationQueueFile = require('./queue/notificationQueue');
+            if (notificationQueueFile && typeof notificationQueueFile.closeQueue === 'function') {
+                await notificationQueueFile.closeQueue();
+            }
+        } catch (queueErr) {
+            console.error('Error closing notification queue:', queueErr.message);
+        }
+
+        try {
+            const ticketQueueFile = require('./queue/ticketQueue');
+            if (ticketQueueFile && typeof ticketQueueFile.closeQueue === 'function') {
+                await ticketQueueFile.closeQueue();
+            }
+        } catch (queueErr) {
+            console.error('Error closing ticket queue:', queueErr.message);
+        }
+
+        console.log('👋 [SHUTDOWN] Graceful shutdown completed. Exiting.');
+        process.exit(0);
+    } catch (err) {
+        console.error('🚨 [SHUTDOWN ERROR] Error during shutdown:', err.message);
+        process.exit(1);
+    }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+startServer();

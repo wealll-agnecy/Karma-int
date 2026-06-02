@@ -157,4 +157,19 @@ if (REDIS_ENABLED) {
     ticketQueue.offlineMode = true;
 }
 
-module.exports = { ticketQueue };
+const closeQueue = async () => {
+    try {
+        if (worker) {
+            await worker.close();
+            console.log('📥 [SHUTDOWN] Ticket Worker closed.');
+        }
+        if (redisClient) {
+            await redisClient.quit();
+            console.log('📡 [SHUTDOWN] Ticket Redis client disconnected.');
+        }
+    } catch (err) {
+        console.error('Error closing ticket queue:', err.message);
+    }
+};
+
+module.exports = { ticketQueue, closeQueue };

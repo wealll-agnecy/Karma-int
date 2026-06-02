@@ -168,4 +168,19 @@ const cancelReminders = async (userId, eventId) => {
     }
 };
 
-module.exports = { notificationQueue, scheduleReminders, cancelReminders };
+const closeQueue = async () => {
+    try {
+        if (worker) {
+            await worker.close();
+            console.log('📥 [SHUTDOWN] Notification Worker closed.');
+        }
+        if (redisClient) {
+            await redisClient.quit();
+            console.log('📡 [SHUTDOWN] Notification Redis client disconnected.');
+        }
+    } catch (err) {
+        console.error('Error closing notification queue:', err.message);
+    }
+};
+
+module.exports = { notificationQueue, scheduleReminders, cancelReminders, closeQueue };

@@ -117,18 +117,28 @@ exports.getProfit = async (req, res) => {
 
         // Event-wise Profit
         const events = await Event.find({}, 'title _id');
-        const eventStats = await Promise.all(events.map(async (event) => {
-            const eRev = await Revenue.aggregate([
-                { $match: { eventId: event._id } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
-            ]);
-            const eExp = await Expense.aggregate([
-                { $match: { eventId: event._id } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
-            ]);
+        const [eRev, eExp] = await Promise.all([
+            Revenue.aggregate([
+                { $group: { _id: '$eventId', total: { $sum: '$amount' } } }
+            ]),
+            Expense.aggregate([
+                { $group: { _id: '$eventId', total: { $sum: '$amount' } } }
+            ])
+        ]);
 
-            const rev = eRev.length > 0 ? eRev[0].total : 0;
-            const exp = eExp.length > 0 ? eExp[0].total : 0;
+        const revMap = eRev.reduce((acc, r) => {
+            if (r._id) acc[r._id.toString()] = r.total;
+            return acc;
+        }, {});
+
+        const expMap = eExp.reduce((acc, e) => {
+            if (e._id) acc[e._id.toString()] = e.total;
+            return acc;
+        }, {});
+
+        const eventStats = events.map((event) => {
+            const rev = revMap[event._id.toString()] || 0;
+            const exp = expMap[event._id.toString()] || 0;
 
             return {
                 eventId: event._id,
@@ -137,7 +147,7 @@ exports.getProfit = async (req, res) => {
                 expenses: exp,
                 profit: rev - exp
             };
-        }));
+        });
 
         res.status(200).json({
             success: true,

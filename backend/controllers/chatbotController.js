@@ -35,7 +35,10 @@ Answer concisely but thoroughly. If you don't know the answer to a very specific
             { role: 'user', content: message }
         ];
 
-        // Call Pollinations free text API
+        // Call Pollinations free text API with a 10-second timeout to prevent resource exhaustion
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const response = await fetch('https://text.pollinations.ai/', {
             method: 'POST',
             headers: {
@@ -44,8 +47,11 @@ Answer concisely but thoroughly. If you don't know the answer to a very specific
             body: JSON.stringify({
                 messages: messages,
                 model: 'openai'
-            })
+            }),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`API error! status: ${response.status}`);
