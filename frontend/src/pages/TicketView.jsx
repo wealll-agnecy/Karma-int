@@ -99,6 +99,35 @@ const TicketView = () => {
                     color: #F5F5F5;
                     font-family: 'Inter', sans-serif;
                 }
+                .premium-ticket-container .text-bright {
+                    color: #ffffff !important;
+                }
+                .premium-ticket-container .text-soft {
+                    color: #d1d5db !important;
+                }
+                .premium-ticket-container .text-white {
+                    color: #ffffff !important;
+                }
+                .premium-ticket-container h1,
+                .premium-ticket-container h2,
+                .premium-ticket-container h3,
+                .premium-ticket-container h4,
+                .premium-ticket-container h5,
+                .premium-ticket-container h6,
+                .premium-ticket-container .h1,
+                .premium-ticket-container .h2,
+                .premium-ticket-container .h3,
+                .premium-ticket-container .h4,
+                .premium-ticket-container .h5,
+                .premium-ticket-container .h6 {
+                    color: #ffffff !important;
+                }
+                .premium-ticket-container .pass-title {
+                    color: #ffffff !important;
+                }
+                .premium-ticket-container .pass-category {
+                    color: #C9A227 !important;
+                }
                 .ticket-pass-card {
                     background: rgba(255,255,255,0.03) !important;
                     border: 1px solid rgba(201,162,39,0.2) !important;

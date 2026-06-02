@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import * as adminApi from '../api/adminApi';
 import * as eventApi from '../api/eventApi';
 import { playSound } from '../utils/soundManager';
+import PremiumSearchBar from '../components/common/PremiumSearchBar';
 import '../css/admin-pages.css';
 
 const AdminStaffManagement = () => {
@@ -87,17 +88,11 @@ const AdminStaffManagement = () => {
                         <p className="dashboard-subtext">Manage platform staff and assignment protocols</p>
                     </div>
                     <div className="d-flex gap-3">
-                        <div className="admin-search-wrapper position-relative">
-                            <FaSearch className="search-icon position-absolute top-50 translate-middle-y ms-3 text-muted" style={{ zIndex: 10 }} />
-                            <input
-                                type="text"
-                                className="form-control admin-search-input"
-                                placeholder="Search by name, role..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                style={{ minWidth: '300px' }}
-                            />
-                        </div>
+                        <PremiumSearchBar 
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            style={{ minWidth: '300px' }}
+                        />
                         <button className="btn btn-pink" onClick={() => setShowCreateModal(true)}>
                             <FaUserPlus /> New Personnel
                         </button>
@@ -160,7 +155,7 @@ const AdminStaffManagement = () => {
                 show={showCreateModal} 
                 onHide={() => setShowCreateModal(false)} 
                 centered 
-                size="md"
+                size="sm"
                 className="premium-popup"
             >
                 <div className="popup-body">
@@ -169,48 +164,49 @@ const AdminStaffManagement = () => {
                     </button>
                     
                     <div className="popup-content">
-                        <div className="d-flex align-items-center gap-3 mb-4">
+                        <div className="d-flex align-items-center gap-2 mb-3">
                             <div className="modal-icon-header">
                                 <FaUserPlus />
                             </div>
                             <div>
-                                <h4 className="fw-black m-0">Initialize Personnel</h4>
+                                <h4 className="fw-black m-0" style={{ fontSize: '1.25rem' }}>Initialize Personnel</h4>
                                 <p className="m-0 tiny-text uppercase tracking-widest text-pink fw-bold">Identity Deployment Protocol</p>
                             </div>
                         </div>
 
                         <Form onSubmit={handleCreateStaff}>
-                            <div className="section-card mb-3">
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest" style={{ fontSize: '10px' }}>Full Identity Name</Form.Label>
-                                    <Form.Control required type="text" className="rounded-12 border-light py-2" placeholder="e.g. John Matrix" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                            <div className="section-card mb-2">
+                                <Form.Group className="mb-2">
+                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest mb-1" style={{ fontSize: '10px' }}>Full Identity Name</Form.Label>
+                                    <Form.Control required type="text" className="rounded-12 border-light py-1" placeholder="e.g. John Matrix" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                                 </Form.Group>
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest" style={{ fontSize: '10px' }}>Operational Email Link</Form.Label>
-                                    <Form.Control required type="email" className="rounded-12 border-light py-2" placeholder="staff@growthutsav.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                                <Form.Group className="mb-2">
+                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest mb-1" style={{ fontSize: '10px' }}>Operational Email Link</Form.Label>
+                                    <Form.Control required type="email" className="rounded-12 border-light py-1" placeholder="staff@growthutsav.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                                 </Form.Group>
                                 <Form.Group className="mb-0">
-                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest" style={{ fontSize: '10px' }}>Mobile Number <span className="text-muted fw-normal">(optional — for mobile login)</span></Form.Label>
-                                    <Form.Control type="tel" className="rounded-12 border-light py-2" placeholder="e.g. 9876543210" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest mb-1" style={{ fontSize: '10px' }}>Mobile Number <span className="text-muted fw-normal">(optional — for mobile login)</span></Form.Label>
+                                    <Form.Control type="tel" className="rounded-12 border-light py-1" placeholder="e.g. 9876543210" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                                 </Form.Group>
                             </div>
 
-                            <div className="section-card mb-4">
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest" style={{ fontSize: '10px' }}>Security Access Key</Form.Label>
-                                    <Form.Control required type="password" minLength={6} className="rounded-12 border-light py-2" placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                            <div className="section-card mb-3">
+                                <Form.Group className="mb-2">
+                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest mb-1" style={{ fontSize: '10px' }}>Security Access Key</Form.Label>
+                                    <Form.Control required type="password" minLength={6} className="rounded-12 border-light py-1" placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
                                 </Form.Group>
                                 <Form.Group className="mb-0">
-                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest" style={{ fontSize: '10px' }}>Operational Designation</Form.Label>
-                                    <Form.Select className="rounded-12 border-light py-2" value={formData.staffRole} onChange={e => setFormData({ ...formData, staffRole: e.target.value })}>
+                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest mb-1" style={{ fontSize: '10px' }}>Operational Designation</Form.Label>
+                                    <Form.Select className="rounded-12 border-light py-1" value={formData.staffRole} onChange={e => setFormData({ ...formData, staffRole: e.target.value })}>
                                         <option value="gate staff">Gate Staff</option>
                                         <option value="coordinator">Coordinator</option>
                                         <option value="support">Support</option>
                                     </Form.Select>
                                 </Form.Group>
                             </div>
-                            
-                            <Button type="submit" className="btn btn-pink w-100 rounded-pill py-3 fw-black shadow-glow">DEPLOY PERSONNEL RECORD</Button>
+                            <div className="d-flex justify-content-center mt-3">
+                                <Button type="submit" className="btn btn-pink px-4 rounded-pill py-2 fw-black shadow-glow btn-sm">DEPLOY PERSONNEL RECORD</Button>
+                            </div>
                         </Form>
                     </div>
                 </div>

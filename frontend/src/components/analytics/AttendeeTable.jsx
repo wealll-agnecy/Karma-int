@@ -3,6 +3,7 @@ import { Table, Form, InputGroup, Badge, Button } from 'react-bootstrap';
 import { FaSearch, FaDownload, FaCheckCircle, FaClock, FaTimesCircle } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { formatCurrency } from '../../utils/formatUtils';
+import PremiumSearchBar from '../common/PremiumSearchBar';
 
 const AttendeeTable = ({ attendees, exportToCSV }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,17 +18,11 @@ const AttendeeTable = ({ attendees, exportToCSV }) => {
         <div className="attendee-management">
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-4 mb-4">
                 <div className="flex-grow-1">
-                    <InputGroup className="glass-panel border-white/10 rounded-pill overflow-hidden shadow-inner" style={{ maxWidth: '400px' }}>
-                        <InputGroup.Text className="bg-transparent border-0 ps-4 text-white-50">
-                            <FaSearch />
-                        </InputGroup.Text>
-                        <Form.Control
-                            placeholder="SEARCH GUESTS..."
-                            className="bg-transparent border-0 text-white fw-bold py-3 outline-none shadow-none"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </InputGroup>
+                    <PremiumSearchBar 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{ maxWidth: '400px' }}
+                    />
                 </div>
                 <Button
                     variant="success"

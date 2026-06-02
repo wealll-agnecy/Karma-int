@@ -1,9 +1,7 @@
 import React from 'react';
-import { Card, Badge, Row, Col } from 'react-bootstrap';
-import { FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaArrowRight, FaClock, FaEye } from 'react-icons/fa';
+import { FaCalendarAlt, FaMapMarkerAlt, FaUsers } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import API_BASE_URL from '../../config/apiConfig';
 import { formatCurrency, resolveImageUrl } from '../../utils/formatUtils';
 
 const OrganizerEventCard = ({ event }) => {
@@ -17,6 +15,8 @@ const OrganizerEventCard = ({ event }) => {
             whileHover={{ y: -5 }}
             transition={{ duration: 0.2 }}
             className="h-100 position-relative"
+            onClick={() => navigate(`/organizer/event/${event._id}`)}
+            style={{ cursor: 'pointer' }}
         >
             <div className="dashboard-card shadow-sm overflow-hidden p-0 border-0 h-100">
                 <div className="position-relative" style={{ height: '180px' }}>
@@ -66,18 +66,6 @@ const OrganizerEventCard = ({ event }) => {
                         </div>
                         <div className="fw-black text-pink">{formatCurrency(minPrice)}</div>
                     </div>
-                </div>
-
-                {/* View Actions Overlay on Hover */}
-                <div className="card-actions-overlay position-absolute top-0 end-0 p-3 d-flex gap-2">
-                    <button 
-                        className="btn btn-sm btn-light rounded-circle shadow-sm"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/organizer/event/${event._id}`); }}
-                        title="View Event Details"
-                        style={{ width: '35px', height: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                        <FaEye className="text-secondary" />
-                    </button>
                 </div>
 
             </div>

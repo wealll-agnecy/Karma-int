@@ -93,8 +93,8 @@ const AdminDashboard = () => {
                     <p className="dashboard-subtext m-0">Analytics, finances and platform management portal.</p>
                 </div>
 
-                {/* ─── Stats Grid ─── */}
-                <div className="stats-grid-saas mt-2">
+                {/* ─── Stats Grid (Desktop) ─── */}
+                <div className="stats-grid-saas mt-2 d-none d-md-grid">
                     <div className="dashboard-card">
                         <span className="card-title-sm">Organizers</span>
                         <h3 className="card-value-lg">{liveStats.totalOrganizers}</h3>
@@ -116,7 +116,7 @@ const AdminDashboard = () => {
                         <div className="mt-2 text-slate small fw-bold">Total Sales</div>
                     </div>
                     <Link to="/admin/enquiries" className="text-decoration-none text-dark">
-                        <div className="dashboard-card hover-lift transition-all">
+                        <div className="dashboard-card hover-lift transition-all h-100">
                             <span className="card-title-sm d-flex justify-content-between align-items-center">
                                 Enquiries
                                 {liveStats.totalEnquiries > 0 && (
@@ -133,43 +133,82 @@ const AdminDashboard = () => {
                     </Link>
                 </div>
 
+                {/* --- MOBILE STATS (5 cards strictly in one line) --- */}
+                <div className="d-md-none w-100 mb-4 pb-2 mt-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Hosts</div>
+                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.totalOrganizers}</div>
+                        <div className="mt-1 text-success" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Active</div>
+                    </div>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Nodes</div>
+                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.totalStaff}</div>
+                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Master</div>
+                    </div>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Events</div>
+                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.totalEvents}</div>
+                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Global</div>
+                    </div>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Sales</div>
+                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.ticketsSold.toLocaleString()}</div>
+                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Total</div>
+                    </div>
+                    <Link to="/admin/enquiries" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                        <div className="dashboard-card shadow-sm m-0 h-100" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden', position: 'relative' }}>
+                            {liveStats.totalEnquiries > 0 && (
+                                <span className="position-absolute top-0 end-0 p-1 bg-pink rounded-circle" style={{ width: '8px', height: '8px', margin: '4px' }}></span>
+                            )}
+                            <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Inbox</div>
+                            <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{liveStats.totalEnquiries || 0}</div>
+                            <div className="mt-1 text-pink" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>View</div>
+                        </div>
+                    </Link>
+                </div>
 
 
-                {/* â”€â”€â”€ Core Intelligence Panels â”€â”€â”€ */}
+
+                {/* ─── Core Intelligence Panels ─── */}
                 <Row className="mb-4">
-                    {/* â”€â”€â”€ Left Column â”€â”€â”€ */}
-                    <Col lg={4} className="d-flex flex-column gap-4">
-                        {/* Net Profit */}
-                        <div className="dashboard-card d-flex flex-column justify-content-center">
-                            <span className="card-title-sm mb-3">Net Profit</span>
-                            <h2 className="fw-bold mb-4" style={{ fontSize: '2.5rem', letterSpacing: '-0.04em' }}>
-                                {formatCurrency(liveStats.profit || 0)}
-                            </h2>
-                            <div className="mt-2 text-slate small fw-bold">Master Calculation</div>
-                            <div className="mt-4 pt-3 border-top">
-                                <div className="d-flex justify-content-between mb-2">
-                                    <span className="small text-slate">Gross Volume</span>
-                                    <span className="small fw-bold">{formatCurrency(liveStats.revenue || 0)}</span>
+                    {/* ─── Left Column ─── */}
+                    <Col xs={12} lg={4}>
+                        <Row className="g-4">
+                            <Col xs={6} lg={12}>
+                                {/* Net Profit */}
+                                <div className="dashboard-card d-flex flex-column justify-content-center h-100 p-3 p-md-4">
+                                    <span className="card-title-sm mb-2 mb-md-3">Net Profit</span>
+                                    <h2 className="fw-bold mb-2 mb-md-4" style={{ fontSize: '1.5rem', letterSpacing: '-0.04em' }}>
+                                        {formatCurrency(liveStats.profit || 0)}
+                                    </h2>
+                                    <div className="mt-1 mt-md-2 text-slate small fw-bold" style={{ fontSize: '0.65rem' }}>Master Calc</div>
+                                    <div className="mt-2 mt-md-4 pt-2 pt-md-3 border-top">
+                                        <div className="d-flex flex-column flex-md-row justify-content-between mb-1 mb-md-2">
+                                            <span className="small text-slate" style={{ fontSize: '0.6rem' }}>Volume</span>
+                                            <span className="small fw-bold" style={{ fontSize: '0.7rem' }}>{formatCurrency(liveStats.revenue || 0)}</span>
+                                        </div>
+                                        <div className="d-flex flex-column flex-md-row justify-content-between">
+                                            <span className="small text-slate" style={{ fontSize: '0.6rem' }}>Op Loss</span>
+                                            <span className="small fw-bold text-danger" style={{ fontSize: '0.7rem' }}>-{formatCurrency((liveStats.revenue || 0) - (liveStats.profit || 0))}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="d-flex justify-content-between">
-                                    <span className="small text-slate">Operational Loss</span>
-                                    <span className="small fw-bold text-danger">-{formatCurrency((liveStats.revenue || 0) - (liveStats.profit || 0))}</span>
+                            </Col>
+                            <Col xs={6} lg={12}>
+                                {/* Identity Moderation */}
+                                <div className="dashboard-card text-center d-flex flex-column justify-content-center align-items-center py-4 py-md-5 h-100 p-3 p-md-4">
+                                    <span className="card-title-sm align-self-start w-100 text-start mb-3 mb-md-4" style={{ fontSize: '0.6rem' }}>Moderation</span>
+                                    <div className="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-2 mb-md-3" style={{ width: '32px', height: '32px' }}>
+                                        <FaCheck className="text-white" size={12} />
+                                    </div>
+                                    <p className="text-slate small fw-bold m-0" style={{ fontSize: '0.65rem', lineHeight: '1.2' }}>No pending<br/>requests</p>
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Identity Moderation */}
-                        <div className="dashboard-card text-center d-flex flex-column justify-content-center align-items-center py-5">
-                            <span className="card-title-sm align-self-start w-100 text-start mb-4">Identity Moderation</span>
-                            <div className="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '40px', height: '40px' }}>
-                                <FaCheck className="text-white" />
-                            </div>
-                            <p className="text-slate small fw-bold m-0">No pending requests</p>
-                        </div>
+                            </Col>
+                        </Row>
                     </Col>
 
-                    {/* â”€â”€â”€ Right Column â”€â”€â”€ */}
-                    <Col lg={8} className="d-flex flex-column gap-4">
+                    {/* ─── Right Column ─── */}
+                    <Col xs={12} lg={8} className="d-flex flex-column gap-4">
                         {/* Add Expenses */}
                         <div className="dashboard-card">
                             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -183,7 +222,7 @@ const AdminDashboard = () => {
                                      <div className="text-slate" style={{ fontSize: '0.7rem' }}>Other</div>
                                  </div>
                                  <div className="d-flex align-items-center gap-3">
-                                     <span className="fw-bold text-danger">â‚¹5,000</span>
+                                     <span className="fw-bold text-danger">₹5,000</span>
                                      <div className="bg-primary rounded p-1 d-flex align-items-center justify-content-center" style={{ width: '24px', height: '24px', cursor: 'pointer' }}>
                                          <FaTrash className="text-white" size={10} /> 
                                      </div>

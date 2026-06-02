@@ -124,12 +124,36 @@ h4 {
 }
 
 /* === STANDARDIZED PREMIUM POPUP SYSTEM === */
+.premium-popup .modal-dialog {
+  max-width: 700px !important;
+  margin: auto !important;
+}
+
+.premium-popup .modal-dialog label {
+  font-weight: 700 !important;
+  color: #000 !important;
+  letter-spacing: 2px !important;
+}
+
+.premium-popup {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
 .premium-popup .modal-content {
   background: var(--bg-card) !important;
   border: 1px solid var(--border) !important;
   border-radius: 28px !important;
   overflow: hidden !important;
   box-shadow: var(--premium-shadow) !important;
+}
+
+/* === PREVENT TEXT BREAKING IN RESPONSIVE TABLES === */
+.table-responsive th,
+.table-responsive td {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  word-wrap: normal !important;
 }
 
 .popup-content {
@@ -208,8 +232,41 @@ h4 {
     grid-template-columns: 1fr !important;
   }
 
+  .premium-popup .modal-dialog {
+    max-width: 320px !important;
+    margin: 1.75rem auto !important;
+  }
+
   .popup-content {
-    padding: 20px !important;
+    padding: 16px !important;
+  }
+
+  .section-card {
+    padding: 16px !important;
+    border-radius: 16px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* === OVERRIDES FOR SMALL MODALS ON MOBILE === */
+  .premium-popup .form-control,
+  .premium-popup .form-select,
+  .premium-popup input[type="text"],
+  .premium-popup input[type="email"],
+  .premium-popup input[type="password"],
+  .premium-popup input[type="tel"],
+  .premium-popup input[type="number"],
+  .premium-popup textarea,
+  .premium-popup select {
+    min-height: 36px !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    border-radius: 8px !important;
+  }
+
+  .premium-popup .btn {
+    min-height: 34px !important;
+    padding: 6px 16px !important;
+    font-size: 13px !important;
   }
 }
 
@@ -242,6 +299,7 @@ select,
   box-sizing: border-box !important;
   min-height: 48px !important;
 }
+
 
 /* === UNIVERSAL BUTTON STANDARDS === */
 .btn {

@@ -60,10 +60,7 @@ exports.sendBookingConfirmation = async (user, event, pdfBuffer, bookingDetails)
                         </div>
                     </div>
                     
-                    <div style="text-align: center; margin: 32px 0;">
-                        <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">Can't see the attachment? Click below to download:</p>
-                        <a href="${downloadUrl}" style="background-color: #AD1457; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; display: inline-block; transition: all 0.3s ease;">Download PDF Ticket</a>
-                    </div>
+
 
                     <p style="font-size: 13px; color: #9ca3af; text-align: center; line-height: 1.5;">
                         Please ensure you have the attached QR code ready at the entrance for a seamless entry process.

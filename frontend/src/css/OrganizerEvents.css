@@ -1,21 +1,21 @@
 .organizer-events-page {
-  max-width: 1200px;
+  /* max-width: 1200px; */
   margin: auto;
   padding: 16px;
 }
 
 /* Fix headings */
-.organizer-events-page h1 {
+/* .organizer-events-page h1 {
   font-size: 22px !important;
 }
 
 .organizer-events-page h2 {
   font-size: 18px !important;
-}
+} */
 
-.organizer-events-page .dashboard-title-main {
-    font-size: 22px !important;
-}
+/* .organizer-events-page .dashboard-title-main {
+  font-size: 22px !important;
+} */
 
 /* Fix card size */
 .organizer-events-page .event-card,
@@ -45,8 +45,8 @@
 }
 
 .organizer-events-page .stats-grid-saas {
-    gap: 15px !important;
-    margin-bottom: 25px !important;
+  gap: 15px !important;
+  margin-bottom: 25px !important;
 }
 
 /* Fix images */

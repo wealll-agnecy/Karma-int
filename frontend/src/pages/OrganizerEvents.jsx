@@ -53,15 +53,15 @@ const OrganizerEvents = () => {
             <div className="dashboard-page">
                 <div className="dashboard-header d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-4">
                     <div>
-                        <h1 className="dashboard-title-main">My Events</h1>
+                        <h2 className="dashboard-title-main">My Events</h2>
                         <p className="dashboard-subtext">
                             Monitoring {orgStats.totalEvents} active event nodes across the infrastructure.
                         </p>
                     </div>
                 </div>
 
-                {/* ─── Stats Grid ─── */}
-                <div className="stats-grid-saas mb-5">
+                {/* ─── Stats Grid (Desktop) ─── */}
+                <div className="stats-grid-saas mb-5 d-none d-md-grid">
                     <div className="dashboard-card shadow-sm">
                         <span className="card-title-sm">Aggregate Revenue</span>
                         <h3 className="card-value-lg">{formatCurrency(orgStats.totalRevenue)}</h3>
@@ -76,6 +76,25 @@ const OrganizerEvents = () => {
                         <span className="card-title-sm">Active Nodes</span>
                         <h3 className="card-value-lg">{orgStats.approvedEvents}</h3>
                         <div className="mt-2 text-slate small fw-bold">Live Catalog</div>
+                    </div>
+                </div>
+
+                {/* --- MOBILE STATS (3 cards strictly in one line) --- */}
+                <div className="d-md-none w-100 mb-4 pb-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '8px 4px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.55rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Revenue</div>
+                        <div className="card-value-lg fw-bold text-truncate" style={{ fontSize: '0.9rem' }}>{formatCurrency(orgStats.totalRevenue)}</div>
+                        <div className="mt-1 text-success" style={{ fontSize: '0.55rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Balance</div>
+                    </div>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '8px 4px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.55rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Tickets</div>
+                        <div className="card-value-lg fw-bold text-truncate" style={{ fontSize: '0.9rem' }}>{orgStats.totalTicketsSold}</div>
+                        <div className="mt-1 text-pink" style={{ fontSize: '0.55rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Sold Out</div>
+                    </div>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '8px 4px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.55rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Nodes</div>
+                        <div className="card-value-lg fw-bold text-truncate" style={{ fontSize: '0.9rem' }}>{orgStats.approvedEvents}</div>
+                        <div className="mt-1 text-slate" style={{ fontSize: '0.55rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Live</div>
                     </div>
                 </div>
 

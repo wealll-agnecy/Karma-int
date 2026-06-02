@@ -122,11 +122,13 @@ exports.generateTicketPDF = async (ticketId) => {
             const entryQty = (ticket.quantity) ? ticket.quantity : ((ticket.booking && ticket.booking.quantity) ? ticket.booking.quantity : 1);
             const dayCount = (ticket.selectedDays && ticket.selectedDays.length > 0) ? ticket.selectedDays.length : 1;
             
-            const validityTitle = `VALID FOR ${dayCount} DAY${dayCount > 1 ? 'S' : ''}`;
+            const validityTitle = `VALID FOR 5 DAYS`;
             const entryLabel = `Valid for ${entryQty} Person${entryQty > 1 ? 's' : ''} Entry`;
+            const staticValidityText = "This ticket is valid for 5 days only, from 17 August to 21 August.";
             
             doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(11).text(validityTitle, 50, 565);
             doc.fillColor(lightText).font('Helvetica').fontSize(10).text(entryLabel, 50, 580);
+            doc.fillColor('#b91c1c').font('Helvetica-Bold').fontSize(10).text(staticValidityText, 50, 595);
 
             // Complimentary / Selected Catering Meals
             let foodTextToShow = "";

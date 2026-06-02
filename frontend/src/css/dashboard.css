@@ -250,21 +250,46 @@
   }
 
   .stats-grid-saas {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .stats-grid-saas .dashboard-card {
+    padding: 10px 4px !important;
   }
 
   .dashboard-card {
-    padding: 16px !important;
+    padding: 12px !important;
   }
 
   .card-title-sm {
-    font-size: 0.7rem !important;
+    font-size: 0.55rem !important;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
+    margin-bottom: 4px;
   }
 
   .card-value-lg {
-    font-size: 1.4rem !important;
+    font-size: 0.9rem !important;
+    white-space: nowrap;
+    letter-spacing: -0.5px;
   }
+}
+
+/* Fix mobile tabs scrolling without affecting content */
+.leads-mobile-tabs .nav-tabs {
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 4px;
+}
+
+.leads-mobile-tabs .nav-tabs::-webkit-scrollbar {
+  display: none !important;
 }
 
 @media (max-width: 400px) {
@@ -408,5 +433,15 @@
 
   .attendee-stat-card h5 {
     font-size: 1.1rem !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .booking_btn_grid {
+    flex-wrap: nowrap !important;
+  }
+
+  .booking_btn_grid button {
+    border: 2px solid #000 !important;
   }
 }

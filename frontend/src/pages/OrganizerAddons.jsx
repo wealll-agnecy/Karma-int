@@ -9,7 +9,7 @@ const OrganizerAddons = () => {
     const [addons, setAddons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    
+
     const [formData, setFormData] = useState({
         type: 'Custom Section',
         name: ''
@@ -114,41 +114,43 @@ const OrganizerAddons = () => {
             </Container>
 
             {/* Create Addon Modal */}
-            <Modal 
-                show={showModal} 
-                onHide={() => setShowModal(false)} 
-                centered 
-                size="md"
+            <Modal
+                show={showModal}
+                onHide={() => setShowModal(false)}
+                centered
+                size="sm"
                 className="premium-popup"
             >
                 <div className="popup-body">
                     <button className="close-btn" onClick={() => setShowModal(false)} style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
                         <FaTimes size={16} />
                     </button>
-                    
+
                     <div className="popup-content">
-                        <div className="d-flex align-items-center gap-3 mb-4">
+                        <div className="d-flex align-items-center gap-2 mb-3">
                             <div className="modal-icon-header">
                                 <FaPlusCircle />
                             </div>
                             <div>
-                                <h4 className="fw-black m-0">Create Add-on</h4>
+                                <h4 className="fw-black m-0" style={{ fontSize: '1.25rem' }}>Create Add-on</h4>
                                 <p className="m-0 tiny-text uppercase tracking-widest text-pink fw-bold">Operational Section</p>
                             </div>
                         </div>
 
                         <Form onSubmit={handleSubmit}>
-                            <div className="section-card mb-3">
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest" style={{ fontSize: '10px' }}>Type</Form.Label>
-                                    <Form.Control required type="text" className="rounded-12 border-light py-2" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} placeholder="e.g. Access Level, Food, Merchandise" />
+                            <div className="section-card mb-2">
+                                <Form.Group className="mb-2">
+                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest mb-1" style={{ fontSize: '10px' }}>Type</Form.Label>
+                                    <Form.Control required type="text" className="rounded-12 border-light py-1" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} placeholder="e.g. Access Level" />
                                 </Form.Group>
                                 <Form.Group className="mb-0">
-                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest" style={{ fontSize: '10px' }}>Section Name</Form.Label>
-                                    <Form.Control required type="text" className="rounded-12 border-light py-2" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. VIP Access, Free T-Shirt" />
+                                    <Form.Label className="small uppercase fw-bold text-muted tracking-widest mb-1" style={{ fontSize: '10px' }}>Section Name</Form.Label>
+                                    <Form.Control required type="text" className="rounded-12 border-light py-1" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. VIP Access" />
                                 </Form.Group>
                             </div>
-                            <Button type="submit" className="btn btn-pink w-100 rounded-pill py-3 fw-black shadow-glow">CREATE SECTION</Button>
+                            <div className="d-flex justify-content-center mt-3">
+                                <Button type="submit" className="btn btn-pink px-4 rounded-pill py-2 fw-black shadow-glow btn-sm">CREATE SECTION</Button>
+                            </div>
                         </Form>
                     </div>
                 </div>

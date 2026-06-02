@@ -1,5 +1,3 @@
-const { GoogleGenAI } = require('@google/genai');
-
 exports.handleChat = async (req, res) => {
     try {
         const { message, history } = req.body;
@@ -7,17 +5,6 @@ exports.handleChat = async (req, res) => {
         if (!message) {
             return res.status(400).json({ success: false, message: 'Message is required' });
         }
-
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            return res.status(500).json({ 
-                success: false, 
-                message: 'AI Service is currently offline. Missing GEMINI_API_KEY in backend configuration. Please add it to your .env file to enable Growthutsav Assistant.' 
-            });
-        }
-
-        // Initialize Gemini SDK
-        const ai = new GoogleGenAI({ apiKey });
 
         const systemInstruction = `You are "Growthutsav Assistant", the official AI support assistant for the Growthutsav Event Organizer Dashboard. 
 Your job is to answer ANY questions the organizer has about their dashboard, events, ticketing, or analytics.
@@ -34,28 +21,37 @@ Here is the context about the platform to base your answers on:
 8. **Staff Hub**: Organizers can add staff members. Staff can log into the Staff Terminal and use the native Scanner tool to validate tickets and QR codes at the venue.
 9. **Add-ons**: Organizers can manage food and goodies (addons) in the Add-ons tab. This info also appears in the Attendee details modal.
 10. **Notifications**: Real-time notifications appear in the top right bell icon dropdown, showing alerts like "Full Payment Received & Ticket Booked".
+11. **Leads**: Organizers can track their unconverted leads in the Leads tab.
 
 Answer concisely but thoroughly. If you don't know the answer to a very specific account question, advise them to contact support@karmainternational.com.`;
 
-        // Format history for the API
-        const formattedHistory = (history || []).map(msg => ({
-            role: msg.sender === 'bot' ? 'model' : 'user',
-            parts: [{ text: msg.text }]
-        }));
+        // Format history for Pollinations AI
+        const messages = [
+            { role: 'system', content: systemInstruction },
+            ...(history || []).map(msg => ({
+                role: msg.sender === 'bot' ? 'assistant' : 'user',
+                content: msg.text
+            })),
+            { role: 'user', content: message }
+        ];
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: [
-                ...formattedHistory,
-                { role: 'user', parts: [{ text: message }] }
-            ],
-            config: {
-                systemInstruction: systemInstruction,
-                temperature: 0.7
-            }
+        // Call Pollinations free text API
+        const response = await fetch('https://text.pollinations.ai/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                messages: messages,
+                model: 'openai'
+            })
         });
 
-        const reply = response.text;
+        if (!response.ok) {
+            throw new Error(`API error! status: ${response.status}`);
+        }
+
+        const reply = await response.text();
 
         res.status(200).json({
             success: true,

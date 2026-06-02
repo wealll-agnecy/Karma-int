@@ -181,8 +181,8 @@ exports.verifyTicketForScanner = async (req, res) => {
         const currentPaymentStatus = booking ? (booking.paymentStatus || 'PENDING').toUpperCase() : (ticket.paymentStatus || 'UNKNOWN');
 
         // Multi-day logic
-        const durationDays = (event && event.isMultiDay) ? (event.multiDayPlan?.length || 1) : 1;
-        const validityText = `Valid for ${durationDays} Day${durationDays > 1 ? 's' : ''}`;
+        const durationDays = 5;
+        const validityText = `Valid for 5 Days`;
 
         // Today's Plan Resolution (Robust Day-Specific Matching)
         let todayPlanInfo = ticket.ticketType;
@@ -290,44 +290,7 @@ exports.verifyTicketForScanner = async (req, res) => {
         }
 
 
-        // If ticket already scanned today, deny (unless continuous multi-day needs day-scoped access).
-        if (ticket.lastScanDate && ticket.lastScanDate >= startOfToday && !isContinuousMultiDay) {
-            return res.status(200).json({
-                success: true,
-                status: 'DENIED',
-                isDuplicate: true,
-                message: 'Already Used Today',
-                data: details,
-                ticket: details
-            });
-        }
-
-        // For continuous multi-day: allow scan only if today matches one of the selectedPlans dates.
-        if (isContinuousMultiDay) {
-            if (!isScanOnIncludedDay) {
-                return res.status(200).json({
-                    success: true,
-                    status: 'DENIED',
-                    isDuplicate: false,
-                    message: 'This ticket is not valid for today',
-                    data: details,
-                    ticket: details
-                });
-            }
-        }
-
-
-        // REMOVED ATOMIC ENTRY MARKING: Public endpoints must never mutate state.
-        if (ticket.status === 'used' || ticket.isScanned) {
-            return res.status(200).json({
-                success: true,
-                status: 'DENIED',
-                isDuplicate: true,
-                message: 'Already Used',
-                data: details,
-                ticket: details
-            });
-        }
+        // Let the scanner handle daily scan logic based on dailyScans Map
 
         return res.status(200).json({
             success: true,
@@ -625,8 +588,8 @@ exports.verifyTicketScan = async (req, res) => {
         const currentPaymentStatus = booking ? (booking.paymentStatus || 'PENDING').toUpperCase() : (ticket.paymentStatus || 'UNKNOWN');
 
         // Multi-day logic
-        const durationDays = (event && event.isMultiDay) ? (event.multiDayPlan?.length || 1) : 1;
-        const validityText = `Valid for ${durationDays} Day${durationDays > 1 ? 's' : ''}`;
+        const durationDays = 5;
+        const validityText = `Valid for 5 Days`;
 
         // 2. Payment Condition
         const isPaid = (

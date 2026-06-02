@@ -244,12 +244,19 @@ const DashboardLayout = ({ children, role }) => {
             <div
                 className={`flex-grow-1 d-flex flex-column min-w-0 dashboard-content-area ${collapsed ? 'collapsed' : ''}`}
             >
+                {/* Mobile Header (Navbar) for both Organizer and Admin */}
                 {role === 'organizer' && (
-                    <OrganizerNavbar onToggleSidebar={() => setShowMobileSidebar(!showMobileSidebar)} />
+                    <OrganizerNavbar onToggleSidebar={() => setShowMobileSidebar(!showMobileSidebar)} role={role} />
+                )}
+                
+                {role === 'admin' && (
+                    <div className="d-md-none">
+                        <OrganizerNavbar onToggleSidebar={() => setShowMobileSidebar(!showMobileSidebar)} role={role} />
+                    </div>
                 )}
 
-                {/* Floating Mobile Sidebar Toggle */}
-                {role !== 'organizer' && (
+                {/* Floating Mobile Sidebar Toggle for Staff */}
+                {role === 'staff' && (
                     <button
                         className="d-md-none mobile-sidebar-toggle-floating"
                         onClick={() => setShowMobileSidebar(!showMobileSidebar)}

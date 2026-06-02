@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Table, Badge, Spinner, Alert, Card, Row, Col, Button, Modal } from 'react-bootstrap';
 import apiClient from '../api/apiClient';
-import { FaTicketAlt, FaWallet, FaCheckCircle, FaExclamationCircle, FaEye, FaFilePdf, FaFileExcel } from 'react-icons/fa';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { FaTicketAlt, FaWallet, FaCheckCircle, FaExclamationCircle, FaEye, FaFileExcel } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import '../css/dashboard.css';
 import { formatCurrency } from '../utils/formatUtils';
@@ -29,32 +27,6 @@ const OrganizerBookings = () => {
         };
         fetchBookings();
     }, []);
-
-    const handleExportPDF = () => {
-        const doc = new jsPDF();
-        doc.text("Organizer Bookings", 14, 15);
-        const tableColumn = ["Attendee Name", "Email", "Event", "Date", "Total Amount", "Amount Paid"];
-        const tableRows = [];
-
-        bookings.forEach(booking => {
-            const rowData = [
-                booking.user?.name || 'Unknown',
-                booking.user?.email || 'N/A',
-                booking.event?.title || 'N/A',
-                new Date(booking.event?.date).toLocaleDateString(),
-                `INR ${booking.totalAmount}`,
-                `INR ${booking.amountPaid || 0}`
-            ];
-            tableRows.push(rowData);
-        });
-
-        doc.autoTable({
-            head: [tableColumn],
-            body: tableRows,
-            startY: 20,
-        });
-        doc.save(`Bookings.pdf`);
-    };
 
     const handleExportExcel = () => {
         const data = bookings.map(booking => ({
@@ -102,13 +74,6 @@ const OrganizerBookings = () => {
                     </div>
                     <div className="d-flex align-items-center gap-3">
                         <Button
-                            variant="danger"
-                            className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
-                            onClick={handleExportPDF}
-                        >
-                            <FaFilePdf /> <span className="d-none d-md-inline">PDF</span>
-                        </Button>
-                        <Button
                             variant="success"
                             className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
                             onClick={handleExportExcel}
@@ -134,41 +99,41 @@ const OrganizerBookings = () => {
                     </div>
                 </div>
 
-                {/* --- MOBILE STATS (Side-by-side Horizontal Scroll) --- */}
-                <div className="d-flex d-md-none flex-nowrap overflow-x-auto mb-4 pb-2" style={{ gap: '12px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-                    <div className="dashboard-card shadow-sm flex-shrink-0" style={{ minWidth: '160px', padding: '16px' }}>
-                        <span className="card-title-sm" style={{ fontSize: '0.75rem' }}>Gross Sales</span>
-                        <h3 className="card-value-lg" style={{ fontSize: '1.5rem' }}>{formatCurrency(totalExpected)}</h3>
+                {/* --- MOBILE STATS (3 cards strictly in one line) --- */}
+                <div className="d-md-none w-100 mb-4 pb-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '8px 4px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.55rem' }}>Gross Sales</div>
+                        <div className="card-value-lg" style={{ fontSize: '0.9rem' }}>{formatCurrency(totalExpected)}</div>
                     </div>
-                    <div className="dashboard-card shadow-sm flex-shrink-0" style={{ minWidth: '160px', padding: '16px' }}>
-                        <span className="card-title-sm" style={{ fontSize: '0.75rem' }}>Collected</span>
-                        <h3 className="card-value-lg text-success" style={{ fontSize: '1.5rem' }}>{formatCurrency(totalCollected)}</h3>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '8px 4px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.55rem' }}>Collected</div>
+                        <div className="card-value-lg text-success" style={{ fontSize: '0.9rem' }}>{formatCurrency(totalCollected)}</div>
                     </div>
-                    <div className="dashboard-card shadow-sm flex-shrink-0" style={{ minWidth: '160px', padding: '16px' }}>
-                        <span className="card-title-sm" style={{ fontSize: '0.75rem' }}>Pending Dues</span>
-                        <h3 className="card-value-lg text-warning" style={{ fontSize: '1.5rem' }}>{formatCurrency(totalPending)}</h3>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '8px 4px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.55rem' }}>Pending Dues</div>
+                        <div className="card-value-lg text-warning" style={{ fontSize: '0.9rem' }}>{formatCurrency(totalPending)}</div>
                     </div>
                 </div>
 
                 {/* --- DESKTOP FILTERS --- */}
                 <div className="d-none d-md-flex flex-wrap gap-2 mb-4">
-                    <Button 
-                        variant={filter === 'all' ? 'dark' : 'outline-dark'} 
-                        onClick={() => setFilter('all')} 
+                    <Button
+                        variant={filter === 'all' ? 'dark' : 'outline-dark'}
+                        onClick={() => setFilter('all')}
                         className="rounded-pill px-4 shadow-none fw-bold small"
                     >
                         All Bookings
                     </Button>
-                    <Button 
-                        variant={filter === 'pending' ? 'warning' : 'outline-warning'} 
-                        onClick={() => setFilter('pending')} 
+                    <Button
+                        variant={filter === 'pending' ? 'warning' : 'outline-warning'}
+                        onClick={() => setFilter('pending')}
                         className={`rounded-pill px-4 shadow-none fw-bold small ${filter === 'pending' ? 'text-dark' : ''}`}
                     >
                         Pending Dues
                     </Button>
-                    <Button 
-                        variant={filter === 'completed' ? 'success' : 'outline-success'} 
-                        onClick={() => setFilter('completed')} 
+                    <Button
+                        variant={filter === 'completed' ? 'success' : 'outline-success'}
+                        onClick={() => setFilter('completed')}
                         className="rounded-pill px-4 shadow-none fw-bold small"
                     >
                         Completed
@@ -176,27 +141,27 @@ const OrganizerBookings = () => {
                 </div>
 
                 {/* --- MOBILE FILTERS (Side-by-side Horizontal Scroll) --- */}
-                <div className="d-flex d-md-none flex-nowrap overflow-x-auto gap-2 mb-4 pb-2" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-                    <Button 
-                        variant={filter === 'all' ? 'dark' : 'outline-dark'} 
-                        onClick={() => setFilter('all')} 
+                <div className="d-flex d-md-none flex-nowrap overflow-x-auto gap-2 mb-4 pb-2 booking_btn_grid" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    <Button
+                        variant={filter === 'all' ? 'dark' : 'outline-dark'}
+                        onClick={() => setFilter('all')}
                         className="rounded-pill px-4 shadow-none fw-bold small text-nowrap"
                     >
-                        All Bookings
+                        All
                     </Button>
-                    <Button 
-                        variant={filter === 'pending' ? 'warning' : 'outline-warning'} 
-                        onClick={() => setFilter('pending')} 
+                    <Button
+                        variant={filter === 'pending' ? 'warning' : 'outline-warning'}
+                        onClick={() => setFilter('pending')}
                         className={`rounded-pill px-4 shadow-none fw-bold small text-nowrap ${filter === 'pending' ? 'text-dark' : ''}`}
                     >
-                        Pending Dues
+                        Pending
                     </Button>
-                    <Button 
-                        variant={filter === 'completed' ? 'success' : 'outline-success'} 
-                        onClick={() => setFilter('completed')} 
+                    <Button
+                        variant={filter === 'completed' ? 'success' : 'outline-success'}
+                        onClick={() => setFilter('completed')}
                         className="rounded-pill px-4 shadow-none fw-bold small text-nowrap"
                     >
-                        Completed
+                        Paid
                     </Button>
                 </div>
 

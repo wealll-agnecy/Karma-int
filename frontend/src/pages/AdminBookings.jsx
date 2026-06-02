@@ -131,9 +131,9 @@ const AdminBookings = () => {
                                     <div className="d-flex flex-column gap-3">
                                         {organizers.map((org) => (
                                             <Card key={org._id} className="border-0 shadow-sm rounded-4 p-3 bg-white mobile-organizer-card-item">
-                                                <div className="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom border-slate-100">
-                                                    <Link to={`/admin/bookings/${org._id}`} className="text-decoration-none d-flex align-items-center gap-3 overflow-hidden">
-                                                        <div className="avatar-gradient-pink text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm fw-bold" style={{ width: '45px', height: '45px', minWidth: '45px' }}>
+                                                <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-3 pb-3 border-bottom border-slate-100 gap-3">
+                                                    <Link to={`/admin/bookings/${org._id}`} className="text-decoration-none d-flex align-items-center gap-3 overflow-hidden w-100">
+                                                        <div className="avatar-gradient-pink text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm fw-bold flex-shrink-0" style={{ width: '45px', height: '45px', minWidth: '45px' }}>
                                                             {org.name?.charAt(0).toUpperCase()}
                                                         </div>
                                                         <div className="overflow-hidden">
@@ -144,26 +144,26 @@ const AdminBookings = () => {
                                                     <Button 
                                                         as={Link} 
                                                         to={`/admin/bookings/${org._id}`}
-                                                        className="btn-pink-outline rounded-pill px-3 py-1.5 fw-bold small transition-all d-inline-flex align-items-center gap-1.5 flex-shrink-0"
-                                                        style={{ fontSize: '0.75rem' }}
+                                                        className="btn-pink-outline rounded-pill px-3 py-2 fw-bold transition-all d-flex justify-content-center align-items-center gap-2 flex-shrink-0 w-100 w-sm-auto"
+                                                        style={{ fontSize: '0.8rem' }}
                                                     >
-                                                        Events <FaChevronRight size={8} />
+                                                        Events <FaChevronRight size={10} />
                                                     </Button>
                                                 </div>
                                                 
-                                                <div className="d-flex align-items-center justify-content-between bg-slate-50 p-2.5 rounded-3">
-                                                    <div className="d-flex flex-column">
-                                                        <span className="text-secondary small fw-bold text-uppercase mb-0.5" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>Phone</span>
-                                                        <span className="small text-dark fw-bold">{org.phone || 'N/A'}</span>
+                                                <div className="d-grid bg-slate-50 p-2 rounded-3" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+                                                    <div className="d-flex flex-column align-items-center text-center">
+                                                        <span className="text-secondary small fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>Phone</span>
+                                                        <span className="small text-dark fw-bold text-truncate w-100 px-1" style={{ fontSize: '0.75rem' }}>{org.phone || 'N/A'}</span>
                                                     </div>
-                                                    <div className="d-flex flex-column text-center">
-                                                        <span className="text-secondary small fw-bold text-uppercase mb-0.5" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>Active Events</span>
-                                                        <span className="small text-dark fw-bold">{org.totalEvents} Units</span>
+                                                    <div className="d-flex flex-column align-items-center text-center border-start border-end border-slate-200 px-1">
+                                                        <span className="text-secondary small fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>Events</span>
+                                                        <span className="small text-dark fw-bold text-truncate w-100 px-1" style={{ fontSize: '0.75rem' }}>{org.totalEvents} Units</span>
                                                     </div>
-                                                    <div className="text-end">
-                                                        <span className="text-secondary small fw-bold text-uppercase d-block mb-1" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>Engagement</span>
-                                                        <Badge className="bg-success-subtle text-success border border-success-light rounded-pill px-2.5 py-1.5 fw-bold" style={{ fontSize: '0.65rem' }}>
-                                                            {org.totalBookings} Guest{org.totalBookings !== 1 ? 's' : ''}
+                                                    <div className="d-flex flex-column align-items-center text-center">
+                                                        <span className="text-secondary small fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>Guests</span>
+                                                        <Badge className="bg-success-subtle text-success border border-success-light rounded-pill px-2 py-1 fw-bold text-truncate" style={{ fontSize: '0.65rem', maxWidth: '100%' }}>
+                                                            {org.totalBookings}
                                                         </Badge>
                                                     </div>
                                                 </div>

@@ -90,8 +90,8 @@ const OrganizerDashboard = () => {
                     </div>
                 </div>
 
-                {/* ─── Stats Grid ─── */}
-                <div className="stats-grid-saas mb-5">
+                {/* ─── Stats Grid (Desktop) ─── */}
+                <div className="stats-grid-saas mb-5 d-none d-md-grid">
                     <div className="dashboard-card shadow-sm">
                         <span className="card-title-sm">Total Events</span>
                         <h3 className="card-value-lg">{stats?.totalEvents || 0}</h3>
@@ -111,6 +111,30 @@ const OrganizerDashboard = () => {
                         <span className="card-title-sm">Completed Events</span>
                         <h3 className="card-value-lg">{revenueData?.totalEvents || 0}</h3>
                         <div className="mt-2 text-slate small fw-bold">Past Events History</div>
+                    </div>
+                </div>
+
+                {/* --- MOBILE STATS (4 cards strictly in one line) --- */}
+                <div className="d-md-none w-100 mb-4 pb-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Total</div>
+                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{stats?.totalEvents || 0}</div>
+                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>All Time</div>
+                    </div>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Upcoming</div>
+                        <div className="card-value-lg fw-bold text-success" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{stats?.approvedEvents || 0}</div>
+                        <div className="mt-1 text-success" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Live</div>
+                    </div>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Tickets</div>
+                        <div className="card-value-lg fw-bold" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{(stats?.totalTicketsSold || 0).toLocaleString()}</div>
+                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Sales</div>
+                    </div>
+                    <div className="dashboard-card shadow-sm m-0" style={{ padding: '6px 2px', textAlign: 'center', overflow: 'hidden' }}>
+                        <div className="card-title-sm mb-1" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Completed</div>
+                        <div className="card-value-lg fw-bold text-secondary" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{revenueData?.totalEvents || 0}</div>
+                        <div className="mt-1 text-slate" style={{ fontSize: '0.45rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>History</div>
                     </div>
                 </div>
 

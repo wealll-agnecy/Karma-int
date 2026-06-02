@@ -38,17 +38,17 @@ const PaymentPage = () => {
             if (verifyRes.data.success) {
                 toast.success("Payment Verified!", { id: loadToast });
                 setShowSuccess(true);
-                
+
                 // Play sound
                 playSound('paymentSuccess');
-                
+
                 // Trigger confetti
                 const duration = 4 * 1000;
                 const animationEnd = Date.now() + duration;
                 const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
                 const randomInRange = (min, max) => Math.random() * (max - min) + min;
 
-                const interval = setInterval(function() {
+                const interval = setInterval(function () {
                     const timeLeft = animationEnd - Date.now();
                     if (timeLeft <= 0) return clearInterval(interval);
 
@@ -76,13 +76,13 @@ const PaymentPage = () => {
         <div className="payment-page">
             <AnimatePresence>
                 {showSuccess && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="success-overlay"
                     >
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.8, opacity: 0, y: 50 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             transition={{ type: 'spring', damping: 15 }}
@@ -109,20 +109,20 @@ const PaymentPage = () => {
 
             <div className="payment-card">
                 <div style={{ textAlign: "center", marginBottom: "32px" }}>
-                    <div style={{ 
-                         width: "80px", 
-                         height: "80px", 
-                         background: "rgba(201,162,39,0.1)", 
-                         borderRadius: "50%", 
-                         display: "flex", 
-                         alignItems: "center", 
-                         justifyContent: "center",
-                         fontSize: "2rem",
-                         margin: "0 auto 16px"
-                      }}>
+                    <div style={{
+                        width: "80px",
+                        height: "80px",
+                        background: "rgba(201,162,39,0.1)",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "2rem",
+                        margin: "0 auto 16px"
+                    }}>
                         💳
                     </div>
-                    <h2 style={{ fontSize: "1.75rem", fontWeight: "800", color: "#F5F5F5", marginBottom: "8px" }}>
+                    <h2 style={{ fontSize: "1.75rem", fontWeight: "800", color: "#ffffff", marginBottom: "8px" }}>
                         Complete Your Payment
                     </h2>
                     <p style={{ color: "#9ca3af", fontSize: "0.95rem" }}>
@@ -142,8 +142,8 @@ const PaymentPage = () => {
                 </div>
 
                 <div style={{ marginTop: "32px" }}>
-                    <button 
-                        className="payment-btn" 
+                    <button
+                        className="payment-btn"
                         onClick={handleCompletePayment}
                         disabled={processing || showSuccess}
                     >
@@ -181,6 +181,9 @@ const PaymentPage = () => {
                     border-radius: 24px;
                     box-shadow: 0 20px 50px rgba(201, 162, 39, 0.05);
                     border: 1px solid rgba(201, 162, 39, 0.15);
+                }
+                .payment-card h2 {
+                    color: #ffffff !important;
                 }
                 .amount-box {
                     margin: 24px 0;
@@ -246,7 +249,7 @@ const PaymentPage = () => {
                 .success-header {
                     font-size: 1.75rem;
                     font-weight: 800;
-                    color: #F5F5F5;
+                    color: #ffffff !important;
                     margin-bottom: 12px;
                 }
                 .success-text {

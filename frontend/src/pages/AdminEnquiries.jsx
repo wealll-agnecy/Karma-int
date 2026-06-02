@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaEnvelope, FaClock, FaEye, FaTrash, FaSearch, FaInbox, FaPhone } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playSound } from '../utils/soundManager';
+import PremiumSearchBar from '../components/common/PremiumSearchBar';
 import '../css/admin-pages.css';
 import '../css/AdminStyles.css';
 
@@ -78,17 +79,11 @@ export default function AdminEnquiries() {
                 <p className="dashboard-subtext enquiries-subtitle">Incoming customer messages and signals</p>
             </div>
             <div className="d-flex gap-3">
-                <div className="admin-search-wrapper position-relative enquiries-search">
-                    <FaSearch className="search-icon position-absolute top-50 translate-middle-y ms-3 text-muted" style={{ zIndex: 10 }} />
-                    <input
-                        type="text"
-                        className="form-control admin-search-input"
-                        placeholder="Search enquiries..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        style={{ minWidth: '300px' }}
-                    />
-                </div>
+                <PremiumSearchBar 
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{ minWidth: '300px' }}
+                />
             </div>
         </div>
 

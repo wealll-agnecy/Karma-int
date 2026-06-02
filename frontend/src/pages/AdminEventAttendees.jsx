@@ -2,13 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Modal } from 'react-bootstrap';
-import { FaUser, FaEnvelope, FaPhone, FaTicketAlt, FaCalendarDay, FaWallet, FaArrowLeft, FaSearch, FaUsers, FaEye, FaFilePdf, FaFileExcel } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaPhone, FaTicketAlt, FaCalendarDay, FaWallet, FaArrowLeft, FaSearch, FaUsers, FaEye, FaFileExcel } from 'react-icons/fa';
 import { formatCurrency } from '../utils/formatUtils';
 import * as analyticsApi from '../api/analyticsApi';
 import toast from 'react-hot-toast';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import PremiumSearchBar from '../components/common/PremiumSearchBar';
 import '../css/AdminStyles.css';
 
 const AdminEventAttendees = () => {
@@ -89,32 +88,6 @@ const AdminEventAttendees = () => {
         setShowModal(true);
     };
 
-    const handleExportPDF = () => {
-        const doc = new jsPDF();
-        doc.text("Event Attendees", 14, 15);
-        const tableColumn = ["Name", "Email", "Phone", "Ticket Type", "Booking Date", "Amount Paid"];
-        const tableRows = [];
-
-        filteredAttendees.forEach(attendee => {
-            const rowData = [
-                attendee.name || 'N/A',
-                attendee.email || 'N/A',
-                attendee.phone || 'N/A',
-                attendee.ticketType || 'N/A',
-                new Date(attendee.bookingDate).toLocaleDateString(),
-                `INR ${attendee.amountPaid}`
-            ];
-            tableRows.push(rowData);
-        });
-
-        doc.autoTable({
-            head: [tableColumn],
-            body: tableRows,
-            startY: 20,
-        });
-        doc.save(`Attendees_${eventId}.pdf`);
-    };
-
     const handleExportExcel = () => {
         const data = filteredAttendees.map(attendee => ({
             Name: attendee.name,
@@ -165,31 +138,17 @@ const AdminEventAttendees = () => {
                     
                     <div className="d-flex align-items-center gap-3">
                         <Button 
-                            variant="danger" 
-                            className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
-                            onClick={handleExportPDF}
-                        >
-                            <FaFilePdf /> <span className="d-none d-md-inline">PDF</span>
-                        </Button>
-                        <Button 
                             variant="success" 
                             className="rounded-pill d-flex align-items-center gap-2 shadow-sm border-0 px-3"
                             onClick={handleExportExcel}
                         >
                             <FaFileExcel /> <span className="d-none d-md-inline">Excel</span>
                         </Button>
-
-                        <div className="admin-search-wrapper position-relative">
-                            <FaSearch className="position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary" />
-                            <input 
-                                type="text" 
-                                className="form-control ps-5 py-3 rounded-pill border-0 shadow-sm" 
-                                placeholder="Search..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                style={{ minWidth: '250px' }}
-                            />
-                        </div>
+                        <PremiumSearchBar 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{ minWidth: '250px' }}
+                        />
                     </div>
                 </div>
 
