@@ -275,7 +275,7 @@ const startServer = async () => {
     }
 };
 
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.PORT || 5003;
 
 server.on('error', (e) => {
     if (e.code === 'EADDRINUSE') {

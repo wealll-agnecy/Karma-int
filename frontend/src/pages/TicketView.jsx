@@ -88,7 +88,7 @@ const TicketView = () => {
 
     const isFullyPaid = amountPaid >= totalAmount || paymentStatus === 'COMPLETED' || paymentStatus === 'PAID';
 
-    const pdfDownloadUrl = `${axios.defaults.baseURL || 'http://localhost:5002'}/api/ticket/download-pdf/${ticket.uuid}`;
+    const pdfDownloadUrl = `${axios.defaults.baseURL || 'http://localhost:5003'}/api/ticket/download-pdf/${ticket.uuid}`;
 
     return (
         <div className="premium-ticket-container pb-5">

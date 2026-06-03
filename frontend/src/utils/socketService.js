@@ -118,7 +118,8 @@ class FirebaseRealtimeService {
 
         if (!hasRequiredConfig) {
             if (!this.warnedMissingConfig) {
-                console.warn('[FIREBASE REALTIME] Missing frontend Firebase config. Realtime listeners are disabled.');
+                // Suppress missing firebase config warning to avoid scaring the user during deployment without realtime features
+                // console.warn('[FIREBASE REALTIME] Missing frontend Firebase config. Realtime listeners are disabled.');
                 this.warnedMissingConfig = true;
             }
             return null;

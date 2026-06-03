@@ -54,7 +54,8 @@ apiClient.interceptors.response.use(
 
         // Handle session expiry
         if (error.response?.status === 401) {
-            console.warn("🔒 Connectivity Protocol Breach: Auto-purging stale identifiers.");
+            // Suppress verbose protocol breach logs
+            // console.warn("🔒 Session expired or unauthorized");
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
