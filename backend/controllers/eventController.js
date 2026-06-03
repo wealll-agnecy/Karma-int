@@ -15,11 +15,7 @@ exports.getEvents = async (req, res, next) => {
             data: events
         });
     } catch (err) {
-        console.error("Error in getEvents:", err);
-        res.status(400).json({
-            success: false,
-            message: err.message
-        });
+        next(err);
     }
 };
 
@@ -44,11 +40,7 @@ exports.getEvent = async (req, res, next) => {
             data: event
         });
     } catch (err) {
-        console.error("Error in getEvent:", err);
-        res.status(400).json({
-            success: false,
-            message: err.message
-        });
+        next(err);
     }
 };
 
@@ -67,10 +59,6 @@ exports.getMyEvents = async (req, res, next) => {
             data: events
         });
     } catch (err) {
-        console.error("Error in getMyEvents:", err);
-        res.status(400).json({
-            success: false,
-            message: err.message
-        });
+        next(err);
     }
 };

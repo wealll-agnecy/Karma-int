@@ -7,7 +7,7 @@ import { RevenueChart } from '../components/analytics/DashboardCharts';
 import DashboardSkeleton from '../components/analytics/DashboardSkeleton';
 import {
     FaCalendarAlt, FaTicketAlt, FaWallet, FaEye, FaChartLine,
-    FaArrowUp, FaCheckCircle, FaBolt
+    FaArrowUp, FaCheckCircle, FaBolt, FaTimesCircle, FaUndo
 } from 'react-icons/fa';
 import '../css/dashboard.css';
 import '../css/global.css';
@@ -98,31 +98,31 @@ const S = {
 
 const metrics = (stats, revenueData) => [
     {
-        label: 'Total Events',
-        value: stats?.totalEvents || 0,
-        sub: 'All Time',
-        icon: <FaCalendarAlt />,
-        accent: '#8b5cf6',
+        label: 'Total Revenue',
+        value: formatCurrency(stats?.totalRevenue || 0),
+        sub: 'Verified Earnings',
+        icon: <FaWallet />,
+        accent: '#2575fc',
     },
     {
-        label: 'Live & Approved',
-        value: stats?.approvedEvents || 0,
-        sub: 'Active Now',
-        icon: <FaBolt />,
+        label: 'Successful Payments',
+        value: stats?.successfulPayments || 0,
+        sub: 'Verified Success',
+        icon: <FaCheckCircle />,
         accent: '#10b981',
     },
     {
-        label: 'Tickets Sold',
-        value: (stats?.totalTicketsSold || 0).toLocaleString(),
-        sub: 'Total Sales',
-        icon: <FaTicketAlt />,
-        accent: '#ec4899',
+        label: 'Failed Payments',
+        value: stats?.failedPayments || 0,
+        sub: 'Declined/Error',
+        icon: <FaTimesCircle />,
+        accent: '#ef4444',
     },
     {
-        label: 'Completed',
-        value: revenueData?.totalEvents || 0,
-        sub: 'Past Events',
-        icon: <FaCheckCircle />,
+        label: 'Refunds',
+        value: stats?.refunds || 0,
+        sub: 'Processed Returns',
+        icon: <FaUndo />,
         accent: '#f59e0b',
     },
 ];

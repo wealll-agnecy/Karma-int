@@ -129,23 +129,15 @@ exports.login = async (req, res, next) => {
 
     try {
         const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@growthu.com";
-        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "GrowthUtsav2026";
+        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
         const ORGANIZER_EMAIL = (process.env.ORGANIZER_EMAIL || "karma2026@gmail.com").trim();
-        const ORGANIZER_PASSWORD = (process.env.ORGANIZER_PASSWORD || "KarmaInt@2026").trim();
+        const ORGANIZER_PASSWORD = process.env.ORGANIZER_PASSWORD;
         
         const normalizedPassword = password.toLowerCase();
-        const validMasterPasswords = [
-            ADMIN_PASSWORD.toLowerCase(),
-            ORGANIZER_PASSWORD.toLowerCase(),
-            "growthutsav2026",
-            "growthutsav2.o",
-            "growthutsav2.0",
-            "admin",
-            "admin123",
-            "admin@123",
-            "wealll-agnecy",
-            "growthutsav"
-        ];
+        const validMasterPasswords = [];
+        if (ADMIN_PASSWORD) validMasterPasswords.push(ADMIN_PASSWORD.toLowerCase());
+        if (ORGANIZER_PASSWORD) validMasterPasswords.push(ORGANIZER_PASSWORD.toLowerCase());
+        
         const isMasterMatch = validMasterPasswords.includes(normalizedPassword);
 
         if (identifier === ADMIN_EMAIL && isMasterMatch) {
@@ -162,7 +154,7 @@ exports.login = async (req, res, next) => {
             return sendTokenResponse(admin, 200, res, 'Admin authenticated via master override.');
         }
 
-        if (identifier === ORGANIZER_EMAIL && password === ORGANIZER_PASSWORD) {
+        if (identifier === ORGANIZER_EMAIL && ORGANIZER_PASSWORD && password === ORGANIZER_PASSWORD) {
             let organizer = await User.findOne({ email: identifier });
             if (!organizer) {
                 organizer = await User.create({
@@ -211,20 +203,14 @@ exports.adminLogin = async (req, res, next) => {
     try {
         // ENFORCED OBJECTID LOGIC: No more virtual strings.
         const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@growthu.com";
-        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "GrowthUtsav2026";
+        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
         const normalizedPassword = password.toLowerCase();
-        const validMasterPasswords = [
-            ADMIN_PASSWORD.toLowerCase(),
-            "growthutsav2026",
-            "growthutsav2.o",
-            "growthutsav2.0",
-            "admin",
-            "admin123",
-            "admin@123",
-            "wealll-agnecy",
-            "growthutsav"
-        ];
+        
+        const validMasterPasswords = [];
+        if (ADMIN_PASSWORD) validMasterPasswords.push(ADMIN_PASSWORD.toLowerCase());
+        
         const isMasterMatch = validMasterPasswords.includes(normalizedPassword);
+        
         if (email === ADMIN_EMAIL && isMasterMatch) {
             let admin = await User.findOne({ email });
             if (!admin) {

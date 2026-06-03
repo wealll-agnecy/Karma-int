@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import * as bookingApi from '../api/bookingApi';
 import api from '../api/apiClient';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
+import { playSound } from "../utils/soundManager";
 import './KarmaBookingPage.css';
 
 export default function KarmaBookingPage() {
@@ -23,6 +26,7 @@ export default function KarmaBookingPage() {
     const [eventDetails, setEventDetails] = useState(null);
     const [isLoadingEvent, setIsLoadingEvent] = useState(true);
     const [processing, setProcessing] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const [paymentMode, setPaymentMode] = useState('full');
     const [partialAmountValue, setPartialAmountValue] = useState('');
@@ -134,14 +138,19 @@ export default function KarmaBookingPage() {
             ];
 
             const ticketType = selectedPlanName || eventDetails?.ticketTypes?.[0]?.name;
+            const finalAmount = paymentMode === 'partial' ? Number(partialAmountValue) : total;
 
-            // Save to Karma DB
-            await api.post('/karma', {
-                fullName, whatsappNumber, email, carrier, address, pincode,
-                members, eventId: eventId,
-            }).catch(e => console.warn('Karma DB save skipped/handled downstream:', e));
+            // Load Razorpay Script
+            const loadToast = toast.loading(`Initiating secure checkout for ₹${finalAmount.toLocaleString('en-IN')}...`);
+            const { loadRazorpayScript } = await import("../utils/loadScript");
+            const isLoaded = await loadRazorpayScript();
+            if (!isLoaded) {
+                toast.error("Failed to load payment gateway.", { id: loadToast });
+                setProcessing(false);
+                return;
+            }
 
-            // Standard backend checkout logic call
+            // Standard backend checkout logic call (Creates booking)
             const checkoutRes = await bookingApi.checkout({
                 eventId: eventId,
                 ticketType: ticketType,
@@ -150,21 +159,98 @@ export default function KarmaBookingPage() {
                 contactEmail: email,
                 address,
                 city: carrier,
-                partialAmount: paymentMode === 'partial' ? Number(partialAmountValue) : total,
+                partialAmount: finalAmount,
             });
 
-            if (!checkoutRes.data.success) throw new Error(checkoutRes.data.message || 'Checkout failed');
+            if (!checkoutRes.data.success) {
+                toast.error(checkoutRes.data.message || 'Checkout failed', { id: loadToast });
+                setProcessing(false);
+                return;
+            }
 
-            navigate('/payment', {
-                state: {
-                    bookingId: checkoutRes.data.bookingId,
-                    orderId: checkoutRes.data.order.id,
-                    amount: checkoutRes.data.order.amount / 100
+            const bookingId = checkoutRes.data.bookingId;
+
+            // Create Razorpay Order
+            const { createRazorpayOrder, verifyRazorpayPayment } = await import("../api/paymentApi");
+            const orderRes = await createRazorpayOrder(finalAmount, "INR", { bookingId });
+            
+            if (!orderRes.data.success) {
+                toast.error("Failed to create order.", { id: loadToast });
+                setProcessing(false);
+                return;
+            }
+
+            toast.dismiss(loadToast);
+
+            // Open Razorpay Checkout
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID || "dummy_key",
+                amount: orderRes.data.amount,
+                currency: orderRes.data.currency,
+                name: "Karma Internationals",
+                description: "Event Booking",
+                order_id: orderRes.data.orderId,
+                handler: async function (response) {
+                    try {
+                        const verifyToast = toast.loading("Verifying payment signature...");
+                        
+                        const verifyRes = await verifyRazorpayPayment({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
+                        });
+
+                        if (verifyRes.data.success) {
+                            toast.success("Payment Captured Successfully!", { id: verifyToast });
+                            
+                            setShowSuccess(true);
+                            playSound('paymentSuccess');
+                            confetti({
+                                particleCount: 150,
+                                spread: 70,
+                                origin: { y: 0.6 },
+                                colors: ['#C9A227', '#ffffff']
+                            });
+
+                            setTimeout(() => {
+                                if (verifyRes.data.ticketId) {
+                                    navigate(`/digital-pass/${verifyRes.data.ticketId}`);
+                                } else {
+                                    navigate('/my-bookings'); 
+                                }
+                            }, 3500);
+                        } else {
+                            toast.error("Signature verification failed", { id: verifyToast });
+                        }
+                    } catch (error) {
+                        toast.error("Payment verification failed");
+                        console.error(error);
+                    }
+                },
+                prefill: {
+                    name: fullName,
+                    email: email,
+                    contact: whatsappNumber
+                },
+                theme: {
+                    color: "#C9A227"
+                },
+                modal: {
+                    ondismiss: function() {
+                        setProcessing(false);
+                    }
                 }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                toast.error("Payment failed: " + response.error.description);
+                setProcessing(false);
             });
+            rzp.open();
 
         } catch (err) {
-            toast.error(err.response?.data?.message || err.message || 'Booking checkout redirection error');
+            toast.error(err.response?.data?.message || err.message || 'Booking checkout error');
             setProcessing(false);
         }
     };
@@ -182,6 +268,47 @@ export default function KarmaBookingPage() {
 
     return (
         <div className="karma-booking-page">
+            <AnimatePresence>
+                {showSuccess && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                            background: 'rgba(5, 5, 5, 0.9)', backdropFilter: 'blur(12px)',
+                            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999
+                        }}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.8, opacity: 0, y: 50 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            transition={{ type: 'spring', damping: 15 }}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.03)', padding: '40px', borderRadius: '28px',
+                                width: '90%', maxWidth: '440px', textAlign: 'center',
+                                boxShadow: '0 20px 50px rgba(201, 162, 39, 0.05)',
+                                border: '1px solid rgba(201, 162, 39, 0.2)', color: '#F5F5F5'
+                            }}
+                        >
+                            <div style={{ fontSize: '3.5rem', marginBottom: '20px' }}>🎉</div>
+                            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#F5F5F5', marginBottom: '12px' }}>Booking Confirmed!</h1>
+                            <p style={{ color: '#9ca3af', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '24px' }}>
+                                Your payment has been successfully processed.
+                            </p>
+                            <div style={{ display: 'inline-block', background: 'rgba(201, 162, 39, 0.08)', color: '#C9A227', border: '1px solid rgba(201, 162, 39, 0.2)', padding: '8px 16px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 700, marginBottom: '24px' }}>
+                                📧 Tickets Dispatched via Email & WhatsApp
+                            </div>
+                            <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '8px', fontWeight: 600 }}>
+                                Generating your digital pass...
+                            </p>
+                            <div style={{ fontSize: '0.9rem', color: '#C9A227', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <span className="spinner-border spinner-border-sm" /> Redirecting to Dashboard
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <div className="container">
 
                 {/* Back */}
@@ -216,9 +343,9 @@ export default function KarmaBookingPage() {
                         <p className="kb-event-meta">
                             📍 {eventDetails?.venue} &nbsp;·&nbsp;
                             📅 {eventDetails?.date ? (
-                                (new Date(eventDetails.date).getDate() === 17 && new Date(eventDetails.date).getMonth() === 7 && new Date(eventDetails.date).getFullYear() === 2026)
+                                (new Date(eventDetails.date).getUTCDate() === 17 && new Date(eventDetails.date).getUTCMonth() === 7 && new Date(eventDetails.date).getUTCFullYear() === 2026)
                                 ? '17-21 August 2026'
-                                : new Date(eventDetails.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                                : new Date(eventDetails.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
                             ) : ''}
                         </p>
                     </div>

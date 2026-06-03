@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Table, Badge, Spinner, Alert, Card, Row, Col, Button, Modal } from 'react-bootstrap';
 import apiClient from '../api/apiClient';
-import { FaTicketAlt, FaWallet, FaCheckCircle, FaExclamationCircle, FaEye, FaFileExcel, FaArrowUp, FaFilter } from 'react-icons/fa';
+import { FaTicketAlt, FaWallet, FaCheckCircle, FaExclamationCircle, FaEye, FaFileExcel, FaArrowUp, FaFilter, FaCalendarDay } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import '../css/dashboard.css';
 import { formatCurrency } from '../utils/formatUtils';
@@ -104,6 +104,8 @@ const OrganizerBookings = () => {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [filter, setFilter] = useState('all');
+    const [selectedDate, setSelectedDate] = useState('');
+    const [packageFilter, setPackageFilter] = useState('all');
 
     useEffect(() => {
         const fetchBookings = async () => {
@@ -147,11 +149,28 @@ const OrganizerBookings = () => {
     const totalCollected = bookings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
     const totalPending = totalExpected - totalCollected;
 
+    const packageStats = {};
+    bookings.forEach(b => {
+        const type = b.ticketType || 'Standard';
+        if (!packageStats[type]) packageStats[type] = { count: 0, revenue: 0 };
+        packageStats[type].count += (b.quantity || b.attendeeDetails?.length || 1);
+        packageStats[type].revenue += b.totalAmount;
+    });
+
     const filteredBookings = bookings.filter(b => {
         const isPaid = (b.amountPaid || 0) >= b.totalAmount;
-        if (filter === 'completed') return isPaid;
-        if (filter === 'pending') return !isPaid;
-        return true;
+        let matchesFilter = true;
+        if (filter === 'completed') matchesFilter = isPaid;
+        else if (filter === 'pending') matchesFilter = !isPaid;
+
+        let matchesDate = true;
+        if (selectedDate && b.createdAt) {
+            matchesDate = new Date(b.createdAt).toISOString().split('T')[0] === selectedDate;
+        }
+
+        const matchesPackage = packageFilter === 'all' || (b.ticketType || 'Standard') === packageFilter;
+
+        return matchesFilter && matchesDate && matchesPackage;
     });
 
     return (
@@ -172,47 +191,84 @@ const OrganizerBookings = () => {
                                 Monitor ticket sales and payment collection status.
                             </p>
                         </div>
-                        <button style={S.exportBtn} onClick={handleExportExcel}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 28px rgba(16,185,129,.3)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(16,185,129,.25)'; }}
-                        >
-                            <FaFileExcel /> <span className="d-none d-md-inline">Export Excel</span>
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#fff', border: '1.5px solid #ede8f4', borderRadius: '14px', padding: '10px 16px', boxShadow: '0 4px 16px rgba(100,60,180,0.06)' }}>
+                                <FaCalendarDay color="#9ca3af" size={13} />
+                                <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+                                    style={{ border: 'none', outline: 'none', fontSize: '0.85rem', color: '#374151', background: 'transparent' }} />
+                                {selectedDate && <button onClick={() => setSelectedDate('')} style={{background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', padding: 0}}>Clear</button>}
+                            </div>
+                            <button style={S.exportBtn} onClick={handleExportExcel}
+                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 28px rgba(16,185,129,.3)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(16,185,129,.25)'; }}
+                            >
+                                <FaFileExcel /> <span className="d-none d-md-inline">Export Excel</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* ─── Metric Cards (Desktop) ─── */}
-                <div className="d-none d-md-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', gap: '18px', marginBottom: '28px' }}>
+                <div className="d-none d-md-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '18px', marginBottom: '28px' }}>
                     {[
-                        { label: 'Gross Sales', value: formatCurrency(totalExpected), accent: '#8b5cf6', icon: <FaWallet /> },
-                        { label: 'Collected', value: formatCurrency(totalCollected), accent: '#10b981', icon: <FaCheckCircle /> },
-                        { label: 'Pending Dues', value: formatCurrency(totalPending), accent: '#f59e0b', icon: <FaExclamationCircle /> },
+                        { id: 'gross', label: 'Gross Sales', value: formatCurrency(totalExpected), accent: '#8b5cf6', icon: <FaWallet /> },
+                        { id: 'collected', label: 'Collected', value: formatCurrency(totalCollected), accent: '#10b981', icon: <FaCheckCircle /> },
+                        { id: 'pending', label: 'Pending Dues', value: formatCurrency(totalPending), accent: '#f59e0b', icon: <FaExclamationCircle /> },
+                        ...Object.entries(packageStats).map(([type, stats], i) => ({
+                            id: `pkg-${type}`,
+                            isPackage: true,
+                            type: type,
+                            label: type,
+                            value: `${stats.count} Sold`,
+                            subValue: formatCurrency(stats.revenue),
+                            accent: i % 2 === 0 ? '#3b82f6' : '#ec4899',
+                            icon: <FaTicketAlt />
+                        }))
                     ].map((m, i) => (
-                        <div key={i} style={S.metricCard(m.accent)}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 16px 40px ${m.accent}20`; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 8px 28px ${m.accent}10`; }}
+                        <div key={i} 
+                            onClick={() => m.isPackage ? setPackageFilter(packageFilter === m.type ? 'all' : m.type) : null}
+                            style={{
+                                ...S.metricCard(m.accent),
+                                cursor: m.isPackage ? 'pointer' : 'default',
+                                border: packageFilter === m.type ? `2px solid ${m.accent}` : `1.5px solid ${m.accent}22`,
+                                transform: packageFilter === m.type ? 'translateY(-4px)' : 'none',
+                                boxShadow: packageFilter === m.type ? `0 16px 40px ${m.accent}30` : `0 8px 28px ${m.accent}10`
+                            }}
+                            onMouseEnter={e => { if (packageFilter !== m.type) { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 16px 40px ${m.accent}20`; } }}
+                            onMouseLeave={e => { if (packageFilter !== m.type) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 8px 28px ${m.accent}10`; } }}
                         >
                             <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: `radial-gradient(circle, ${m.accent}20, transparent 70%)` }} />
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                                <span style={S.label}>{m.label}</span>
-                                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: `${m.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.accent, fontSize: '0.9rem' }}>
+                                <span style={{...S.label, color: packageFilter === m.type ? m.accent : '#9ca3af'}}>{m.label}</span>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: packageFilter === m.type ? m.accent : `${m.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: packageFilter === m.type ? '#fff' : m.accent, fontSize: '0.9rem' }}>
                                     {m.icon}
                                 </div>
                             </div>
                             <div style={S.value}>{m.value}</div>
+                            {m.subValue && <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '8px', fontWeight: 600 }}>Rev: {m.subValue}</div>}
                         </div>
                     ))}
                 </div>
 
-                {/* ─── Mobile Metric Cards (3 in a row) ─── */}
-                <div className="d-md-none" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '18px' }}>
+                {/* ─── Mobile Metric Cards ─── */}
+                <div className="d-md-none" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '8px', marginBottom: '18px' }}>
                     {[
                         { label: 'Gross Sales', value: formatCurrency(totalExpected) },
                         { label: 'Collected', value: formatCurrency(totalCollected) },
                         { label: 'Pending', value: formatCurrency(totalPending) },
+                        ...Object.entries(packageStats).map(([type, stats]) => ({
+                            label: type, value: `${stats.count} Sold`, isPackage: true, type: type
+                        }))
                     ].map((m, i) => (
-                        <div key={i} style={{ ...S.card, padding: '12px 10px', textAlign: 'center', borderRadius: '16px' }}>
-                            <div style={{ ...S.label, fontSize: '0.52rem', marginBottom: '6px' }}>{m.label}</div>
+                        <div key={i} 
+                            onClick={() => m.isPackage ? setPackageFilter(packageFilter === m.type ? 'all' : m.type) : null}
+                            style={{ 
+                                ...S.card, padding: '12px 10px', textAlign: 'center', borderRadius: '16px',
+                                border: packageFilter === m.type ? '2px solid #3b82f6' : '1px solid #ede8f4',
+                                background: packageFilter === m.type ? '#eff6ff' : 'rgba(255,255,255,0.97)',
+                                gridColumn: (i === 0 && Object.keys(packageStats).length % 2 === 0) ? 'span 2' : 'span 1'
+                            }}>
+                            <div style={{ ...S.label, fontSize: '0.52rem', marginBottom: '6px', color: packageFilter === m.type ? '#3b82f6' : '#9ca3af' }}>{m.label}</div>
                             <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e1b2e', letterSpacing: '-0.5px' }}>{m.value}</div>
                         </div>
                     ))}
@@ -246,7 +302,7 @@ const OrganizerBookings = () => {
                         <Table className="m-0 align-middle" style={{ marginBottom: 0 }}>
                             <thead>
                                 <tr style={{ background: '#f8f7fc', borderBottom: '1.5px solid #ede8f4' }}>
-                                    {['Attendee', 'Event', 'Payment Progress', 'Status', 'Total Amount'].map((h, i) => (
+                                    {['Attendee', 'Event', 'Booking Date', 'Payment Progress', 'Status', 'Total Amount'].map((h, i) => (
                                         <th key={i} style={{
                                             padding: '16px 20px',
                                             fontSize: '0.65rem',
@@ -255,7 +311,7 @@ const OrganizerBookings = () => {
                                             letterSpacing: '0.12em',
                                             color: '#9ca3af',
                                             border: 'none',
-                                            textAlign: i === 4 ? 'right' : 'left',
+                                            textAlign: i === 5 ? 'right' : 'left',
                                         }}>{h}</th>
                                     ))}
                                 </tr>
@@ -303,6 +359,14 @@ const OrganizerBookings = () => {
                                             <td style={{ padding: '16px 20px', border: 'none' }}>
                                                 <div style={{ fontWeight: 600, color: '#374151', fontSize: '0.85rem' }}>{booking.event?.title}</div>
                                                 <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{new Date(booking.event?.date).toLocaleDateString()}</div>
+                                            </td>
+
+                                            {/* Booking Date */}
+                                            <td style={{ padding: '16px 20px', border: 'none' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>
+                                                    <FaCalendarDay size={12} color="#ec4899" />
+                                                    {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                                </div>
                                             </td>
 
                                             {/* Progress */}
@@ -399,6 +463,10 @@ const OrganizerBookings = () => {
                                     <div style={{ fontWeight: 700, color: '#374151', fontSize: '0.85rem' }}>{booking.event?.title}</div>
                                     <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '2px' }}>
                                         {new Date(booking.event?.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <FaCalendarDay size={10} color="#ec4899" /> 
+                                        Booked on: {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                                     </div>
                                 </div>
 
@@ -595,22 +663,54 @@ const OrganizerBookings = () => {
                                 <div className="border-top pt-4 mb-2">
                                     <h6 className="text-uppercase text-muted fw-bold small mb-3" style={{ letterSpacing: '1px' }}>Payment Summary</h6>
                                     <div style={{ background: 'linear-gradient(135deg,#f8f7fc,#f5f3ff)', borderRadius: '16px', padding: '20px', border: '1.5px solid #ede8f4' }}>
-                                        <Row className="g-3 text-center">
-                                            <Col xs={4}>
+                                        <Row className="g-3 text-center align-items-center mb-3">
+                                            <Col xs={12} sm={4} className="py-2">
                                                 <div className="text-muted small">Total Cost</div>
                                                 <div className="fw-bold fs-5 text-dark">{formatCurrency(selectedBooking.totalAmount)}</div>
                                             </Col>
-                                            <Col xs={4} className="border-start border-end">
+                                            <Col xs={12} sm={4} className="py-2 border-sm-start border-sm-end border-top-mobile border-bottom-mobile">
                                                 <div className="text-muted small">Amount Paid</div>
                                                 <div className="fw-bold fs-5 text-success">{formatCurrency(selectedBooking.amountPaid)}</div>
                                             </Col>
-                                            <Col xs={4}>
+                                            <Col xs={12} sm={4} className="py-2">
                                                 <div className="text-muted small">Outstanding Balance</div>
                                                 <div className={`fw-bold fs-5 ${selectedBooking.remainingAmount > 0 ? 'text-danger' : 'text-slate'}`}>
                                                     {formatCurrency(selectedBooking.remainingAmount)}
                                                 </div>
                                             </Col>
                                         </Row>
+
+                                        {selectedBooking.verifiedPayment && (
+                                            <div className="border-top pt-3 mt-2 text-start">
+                                                <h6 className="text-muted fw-bold small mb-2"><FaCheckCircle className="text-success me-1" /> Verified Transaction Details</h6>
+                                                <Row className="g-2 small">
+                                                    <Col sm={6}>
+                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Status</div>
+                                                        <div className="fw-bold text-success">{selectedBooking.verifiedPayment.status}</div>
+                                                    </Col>
+                                                    <Col sm={6}>
+                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Date</div>
+                                                        <div className="fw-bold">{new Date(selectedBooking.verifiedPayment.paidAt || selectedBooking.verifiedPayment.createdAt).toLocaleString()}</div>
+                                                    </Col>
+                                                    <Col sm={6}>
+                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Amount</div>
+                                                        <div className="fw-bold">{formatCurrency((selectedBooking.verifiedPayment.amount || 0) / 100)} {selectedBooking.verifiedPayment.currency}</div>
+                                                    </Col>
+                                                    <Col sm={6}>
+                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Method</div>
+                                                        <div className="fw-bold">{selectedBooking.verifiedPayment.paymentMethod || 'N/A'}</div>
+                                                    </Col>
+                                                    <Col sm={6}>
+                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment ID</div>
+                                                        <div className="fw-bold text-break font-monospace" style={{ fontSize: '0.8rem' }}>{selectedBooking.verifiedPayment.paymentId || 'N/A'}</div>
+                                                    </Col>
+                                                    <Col sm={6}>
+                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Transaction ID</div>
+                                                        <div className="fw-bold text-break font-monospace" style={{ fontSize: '0.8rem' }}>{selectedBooking.verifiedPayment.transactionId || 'N/A'}</div>
+                                                    </Col>
+                                                </Row>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

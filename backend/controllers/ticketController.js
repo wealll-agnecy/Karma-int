@@ -47,8 +47,18 @@ exports.getTicket = async (req, res, next) => {
         }
 
         const QRCode = require('qrcode');
-        const baseUrl = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
-        const verificationUrl = `${baseUrl}/ticket/${ticket.uuid}`;
+        const baseUrl = process.env.PUBLIC_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : `${req.protocol}://${req.get('host')}`);
+        
+        const jwt = require('jsonwebtoken');
+        const tokenPayload = {
+            ticketId: ticket.uuid,
+            attendeeId: ticket.user ? ticket.user._id.toString() : 'N/A',
+            orderId: (ticket.booking && ticket.booking.payments && ticket.booking.payments[0]) ? ticket.booking.payments[0].orderId : (ticket.booking ? ticket.booking.orderId : 'N/A'),
+            paymentId: (ticket.booking && ticket.booking.payments && ticket.booking.payments[0]) ? ticket.booking.payments[0].paymentId : (ticket.booking ? ticket.booking.paymentId : 'N/A')
+        };
+        const secureToken = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'fallback_secret');
+        
+        const verificationUrl = `${baseUrl}/ticket/${secureToken}`;
         const qrCodeUrl = await QRCode.toDataURL(verificationUrl);
 
         res.status(200).json({
@@ -156,7 +166,17 @@ exports.downloadTicketPublic = async (req, res, next) => {
 // @access  Public (Verification page will display info)
 exports.verifyTicketForScanner = async (req, res) => {
     try {
-        const ticketId = req.params.id; // This is the uuid
+        let ticketId = req.params.id; // This is the uuid
+        
+        const jwt = require('jsonwebtoken');
+        try {
+            const decoded = jwt.verify(ticketId, process.env.JWT_SECRET || 'fallback_secret');
+            if (decoded && decoded.ticketId) {
+                ticketId = decoded.ticketId;
+            }
+        } catch (err) {
+            // It's probably just a legacy UUID, proceed normally.
+        }
         
         const ticket = await Ticket.findOne({ uuid: ticketId })
             .populate('event', 'title date time venue')
@@ -312,7 +332,17 @@ exports.verifyTicketForScanner = async (req, res) => {
 // @access  Private (Staff/Admin)
 exports.verifyTicketForStaff = async (req, res) => {
     try {
-        const ticketId = req.params.id; // Could be uuid
+        let ticketId = req.params.id; // Could be uuid
+        
+        const jwt = require('jsonwebtoken');
+        try {
+            const decoded = jwt.verify(ticketId, process.env.JWT_SECRET || 'fallback_secret');
+            if (decoded && decoded.ticketId) {
+                ticketId = decoded.ticketId;
+            }
+        } catch (err) {
+            // It's probably just a legacy UUID, proceed normally.
+        }
         
         const ticket = await Ticket.findOne({ 
             $or: [
@@ -454,10 +484,20 @@ exports.createTicketAfterPayment = async (bookingId, eventId, userId) => {
 exports.verifyTicket = async (req, res, next) => {
     try {
         const { uuid, eventId } = req.body;
-        const actualUuid = uuid || req.body.ticketCode;
+        let actualUuid = uuid || req.body.ticketCode;
 
         if (!actualUuid) {
             return res.status(400).json({ success: false, message: 'Invalid payload' });
+        }
+
+        const jwt = require('jsonwebtoken');
+        try {
+            const decoded = jwt.verify(actualUuid, process.env.JWT_SECRET || 'fallback_secret');
+            if (decoded && decoded.ticketId) {
+                actualUuid = decoded.ticketId;
+            }
+        } catch (err) {
+            // Proceed normally
         }
 
         const ticket = await Ticket.findOne({ uuid: actualUuid }).populate('event', 'title date time');
@@ -543,7 +583,17 @@ exports.verifyManualTicket = async (req, res, next) => {
 // @access  Private (Staff/Admin)
 exports.verifyTicketScan = async (req, res) => {
     try {
-        const { ticketId } = req.body;
+        let { ticketId } = req.body;
+
+        const jwt = require('jsonwebtoken');
+        try {
+            const decoded = jwt.verify(ticketId, process.env.JWT_SECRET || 'fallback_secret');
+            if (decoded && decoded.ticketId) {
+                ticketId = decoded.ticketId;
+            }
+        } catch (err) {
+            // Proceed normally
+        }
 
         // Single query: fetch ticket + its booking in one aggregation
         const results = await Ticket.aggregate([

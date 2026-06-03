@@ -24,50 +24,87 @@ const PaymentPage = () => {
     const handleCompletePayment = async () => {
         try {
             setProcessing(true);
-            const loadToast = toast.loading(`Processing payment of ₹${amount.toLocaleString('en-IN')}...`);
+            const loadToast = toast.loading(`Initiating secure checkout for ₹${amount.toLocaleString('en-IN')}...`);
 
-            // Verify Payment (Using existing backend logic which updates status, generates PDF, sends email)
-            const verifyRes = await bookingApi.verifyPayment({
-                bookingId: bookingId,
-                amount: amount,
-                razorpay_payment_id: "DEMO_PAY_" + Date.now(),
-                razorpay_order_id: orderId || "ORDER_" + Date.now(),
-                razorpay_signature: "demo_signature"
-            });
-
-            if (verifyRes.data.success) {
-                toast.success("Payment Verified!", { id: loadToast });
-                setShowSuccess(true);
-
-                // Play sound
-                playSound('paymentSuccess');
-
-                // Trigger confetti
-                const duration = 4 * 1000;
-                const animationEnd = Date.now() + duration;
-                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
-                const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
-                const interval = setInterval(function () {
-                    const timeLeft = animationEnd - Date.now();
-                    if (timeLeft <= 0) return clearInterval(interval);
-
-                    const particleCount = 50 * (timeLeft / duration);
-                    confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-                    confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-                }, 250);
-
-                // Auto redirect after 4 seconds
-                setTimeout(() => {
-                    navigate(`/digital-pass/${verifyRes.data.ticketId}`);
-                }, 4000);
-            } else {
-                toast.error("Payment failed. Please try again.", { id: loadToast });
+            // 1. Load Razorpay Script
+            const { loadRazorpayScript } = await import("../utils/loadScript");
+            const isLoaded = await loadRazorpayScript();
+            if (!isLoaded) {
+                toast.error("Failed to load payment gateway.", { id: loadToast });
                 setProcessing(false);
+                return;
             }
+
+            // 2. Create Razorpay Order on Backend
+            const { createRazorpayOrder, verifyRazorpayPayment } = await import("../api/paymentApi");
+            const orderRes = await createRazorpayOrder(amount, "INR", { bookingId });
+            
+            if (!orderRes.data.success) {
+                toast.error("Failed to create order.", { id: loadToast });
+                setProcessing(false);
+                return;
+            }
+
+            toast.dismiss(loadToast);
+
+            // 3. Open Razorpay Checkout
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID || "dummy_key",
+                amount: orderRes.data.amount,
+                currency: orderRes.data.currency,
+                name: "Karma Internationals",
+                description: "Event Booking",
+                order_id: orderRes.data.orderId,
+                handler: async function (response) {
+                    try {
+                        const verifyToast = toast.loading("Verifying payment signature...");
+                        
+                        // 4. Verify Payment on Backend (Only Payment Schema, No Tickets yet)
+                        const verifyRes = await verifyRazorpayPayment({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
+                        });
+
+                        if (verifyRes.data.success) {
+                            toast.success("Payment Captured!", { id: verifyToast });
+                            // "Do not generate tickets yet" -> We stop here for phase 3
+                            // The UI can show success or we just log it.
+                            setShowSuccess(true);
+                            playSound('paymentSuccess');
+                        } else {
+                            toast.error("Signature verification failed", { id: verifyToast });
+                        }
+                    } catch (error) {
+                        toast.error("Payment verification failed");
+                        console.error(error);
+                    }
+                },
+                prefill: {
+                    name: "Guest",
+                    email: "guest@example.com",
+                    contact: "9999999999"
+                },
+                theme: {
+                    color: "#C9A227"
+                },
+                modal: {
+                    ondismiss: function() {
+                        setProcessing(false);
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                toast.error("Payment failed: " + response.error.description);
+                setProcessing(false);
+            });
+            rzp.open();
+
         } catch (err) {
-            console.error("Payment Error:", err);
-            toast.error(err.response?.data?.message || "Payment process failed.");
+            console.error("Payment Initiation Error:", err);
+            toast.error(err.response?.data?.message || "Failed to initiate checkout.");
             setProcessing(false);
         }
     };

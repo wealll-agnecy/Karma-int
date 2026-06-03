@@ -196,14 +196,26 @@ const OrganizerLeads = () => {
                                         <h6 style={P.label}>Interested Event</h6>
                                         <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.9rem', marginBottom: '16px' }}>{selectedLead.event?.title || 'N/A'}</div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', background: '#f8f7fc', padding: '12px', borderRadius: '12px' }}>
-                                            <div>
-                                                <div style={P.label}>Package</div>
-                                                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#4b5563' }}>{selectedLead.ticketType}</div>
+                                        <div style={{ background: '#f8f7fc', padding: '16px', borderRadius: '16px', marginBottom: '16px', border: '1px solid #ede8f4' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                                <div>
+                                                    <div style={P.label}>Package</div>
+                                                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#4b5563' }}>{selectedLead.ticketType}</div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={P.label}>Total Amount</div>
+                                                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#1e1b2e' }}>₹{selectedLead.totalAmount}</div>
+                                                </div>
                                             </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={P.label}>Amount</div>
-                                                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#1e1b2e' }}>₹{selectedLead.totalAmount}</div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #ede8f4', paddingTop: '12px' }}>
+                                                <div>
+                                                    <div style={P.label}>Amount Paid</div>
+                                                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#10b981' }}>₹{selectedLead.amountPaid || 0}</div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={P.label}>Pending Amount</div>
+                                                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#ef4444' }}>₹{selectedLead.totalAmount - (selectedLead.amountPaid || 0)}</div>
+                                                </div>
                                             </div>
                                         </div>
 

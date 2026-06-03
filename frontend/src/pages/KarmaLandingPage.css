@@ -96,6 +96,11 @@ body {
   margin-left: -120px;
 }
 
+.speaker-card-side.right-side {
+  height: 430px !important;
+  width: 350px !important;
+}
+
 .speaker-card-center {
   position: relative;
   width: 400px;
@@ -2006,7 +2011,7 @@ body {
 
 .about-ki-title em {
   font-family: "Playfair Display", serif !important;
-  font-style: italic;
+  font-style: normal;
   font-weight: 700;
   text-transform: none;
   background: linear-gradient(135deg, #f5b94a 0%, #c89028 100%);
@@ -2565,6 +2570,11 @@ body {
   .tnc-title,
   .tnc-contact {
     font-size: 25px !important;
+  }
+
+  .speaker-card-side.right-side {
+    height: 220px !important;
+    width: 180px !important;
   }
 
   .masterclass-title {

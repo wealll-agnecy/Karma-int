@@ -17,9 +17,9 @@ const KarmaLandingPage = () => {
             tag: "Iconic Makeup Educator · 15+ Years Experience",
             bullets: [
                 "Harsh Dave is a renowned makeup artist and beauty educator known for his creative artistry",
-                "professional techniques, and impactful beauty training sessions.",
+                "Professional techniques, and impactful beauty training sessions.",
                 "With expertise in makeup, hairstyling, and advanced beauty education",
-                " he has inspired aspiring artists through workshops and masterclasses across the industry."
+                " He has inspired aspiring artists through workshops and masterclasses across the industry."
             ]
         },
         {
@@ -29,19 +29,19 @@ const KarmaLandingPage = () => {
             tag: "Celebrity Makeup Artist · Co-Founder of Jasmine Beauty Care",
             bullets: [
                 "Richa Dave is an internationally recognized makeup artist, beauty educator.",
-                "entrepreneur known for her signature bridal transformations, advanced artistry techniques, and impactful beauty masterclasses.",
+                "Entrepreneur known for her signature bridal transformations, advanced artistry techniques, and impactful beauty masterclasses.",
                 "As the face behind Jasmine Beauty Care.",
-                "she has inspired thousands of aspiring artists through her creativity, innovation, and industry expertise."
+                "She has inspired thousands of aspiring artists through her creativity, innovation, and industry expertise."
             ]
         },
         {
-            name: "Prarthit Dave",
+            name: "Prarthi Dave",
             role: "Professional hairstylist and Beauty Artist",
             image: "/images/prarthit_dave.png",
             tag: "Creative Director & Stylist · Hair Styling & Media Expert",
             bullets: [
                 "Prarthi Dave is a professional hairstylist and beauty artist known for her creative hairstyling techniques",
-                "bridal transformations, and contribution to advanced beauty education with Jasmine Beauty Care."
+                "Bridal transformations, and contribution to advanced beauty education with Jasmine Beauty Care."
             ]
         }
     ];
@@ -139,8 +139,8 @@ const KarmaLandingPage = () => {
             return <>17<span className="superscript">TH</span> TO 21<span className="superscript">ST</span>, AUGUST, 2026</>;
         }
         const d = new Date(eventDetails.date);
-        const getDayWithSuffix = (date) => {
-            const day = date.getDate();
+        const getDayWithSuffixUTC = (dateObj) => {
+            const day = dateObj.getUTCDate();
             if (day > 3 && day < 21) return `${day}TH`;
             switch (day % 10) {
                 case 1: return `${day}ST`;
@@ -150,12 +150,19 @@ const KarmaLandingPage = () => {
             }
         };
 
-        if (eventDetails.endDate && new Date(eventDetails.date).toDateString() !== new Date(eventDetails.endDate).toDateString()) {
+        const isSameDateUTC = eventDetails.endDate && (
+            d.getUTCDate() === new Date(eventDetails.endDate).getUTCDate() &&
+            d.getUTCMonth() === new Date(eventDetails.endDate).getUTCMonth() &&
+            d.getUTCFullYear() === new Date(eventDetails.endDate).getUTCFullYear()
+        );
+
+        if (eventDetails.endDate && !isSameDateUTC) {
             const endD = new Date(eventDetails.endDate);
-            const startStr = getDayWithSuffix(d);
-            const endStr = getDayWithSuffix(endD);
-            const monthStr = d.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
-            const yearStr = d.getFullYear();
+            const startStr = getDayWithSuffixUTC(d);
+            const endStr = getDayWithSuffixUTC(endD);
+            const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+            const monthStr = monthNames[d.getUTCMonth()];
+            const yearStr = d.getUTCFullYear();
             const parseDay = (dayStr) => {
                 const num = dayStr.slice(0, -2);
                 const suffix = dayStr.slice(-2);
@@ -163,9 +170,10 @@ const KarmaLandingPage = () => {
             };
             return <>{parseDay(startStr)} TO {parseDay(endStr)}, {monthStr}, {yearStr}</>;
         } else {
-            const dayStr = getDayWithSuffix(d);
-            const monthStr = d.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
-            const yearStr = d.getFullYear();
+            const dayStr = getDayWithSuffixUTC(d);
+            const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+            const monthStr = monthNames[d.getUTCMonth()];
+            const yearStr = d.getUTCFullYear();
             const num = dayStr.slice(0, -2);
             const suffix = dayStr.slice(-2);
             return <>{num}<span className="superscript">{suffix}</span>, {monthStr}, {yearStr}</>;
@@ -414,8 +422,8 @@ const KarmaLandingPage = () => {
                                     <ul>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -423,8 +431,8 @@ const KarmaLandingPage = () => {
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -432,8 +440,8 @@ const KarmaLandingPage = () => {
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -442,8 +450,8 @@ const KarmaLandingPage = () => {
 
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -451,8 +459,8 @@ const KarmaLandingPage = () => {
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -473,8 +481,8 @@ const KarmaLandingPage = () => {
                                     <ul>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -482,8 +490,8 @@ const KarmaLandingPage = () => {
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -491,8 +499,8 @@ const KarmaLandingPage = () => {
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -500,8 +508,8 @@ const KarmaLandingPage = () => {
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -510,8 +518,8 @@ const KarmaLandingPage = () => {
 
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -519,8 +527,8 @@ const KarmaLandingPage = () => {
                                         </li>
                                         <li>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round" className="text-yellow-400 flex-shrink-0">
+                                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                strokeLinejoin="round" className="text-yellow-400 flex-shrink-0">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -818,7 +826,7 @@ const KarmaLandingPage = () => {
                             <div className="pgd-circle"><span className="pgd-num">01</span></div>
                             <div className="pgd-content">
                                 <h3 className="pgd-title">Skin Prep & Base</h3>
-                                <p className="pgd-desc">Master flawless glass skin base, color correction, and contouring techniques.</p>
+                                <p className="pgd-desc">Learn 2 New Looks every day (Makeup & Hairstyle) and extra surprises</p>
                             </div>
                         </div>
 
@@ -827,7 +835,7 @@ const KarmaLandingPage = () => {
                             <div className="pgd-circle"><span className="pgd-num">02</span></div>
                             <div className="pgd-content">
                                 <h3 className="pgd-title">Eye Makeup Mastery</h3>
-                                <p className="pgd-desc">Learn advanced smoky eyes, cut crease, glitter application, and liner precision.</p>
+                                <p className="pgd-desc">Learn 2 New Looks every day (Makeup & Hairstyle) and extra surprises</p>
                             </div>
                         </div>
 
@@ -836,7 +844,7 @@ const KarmaLandingPage = () => {
                             <div className="pgd-circle"><span className="pgd-num">03</span></div>
                             <div className="pgd-content">
                                 <h3 className="pgd-title">Bridal & Glam Looks</h3>
-                                <p className="pgd-desc">Create iconic Indian traditional bridal and high-fashion red carpet glam looks.</p>
+                                <p className="pgd-desc">Learn 2 New Looks every day (Makeup & Hairstyle) and extra surprises</p>
                             </div>
                         </div>
 
@@ -845,7 +853,7 @@ const KarmaLandingPage = () => {
                             <div className="pgd-circle"><span className="pgd-num">04</span></div>
                             <div className="pgd-content">
                                 <h3 className="pgd-title">Hair Styling Art</h3>
-                                <p className="pgd-desc">Understand hair texturing, red-carpet updos, volume creation, and detailing.</p>
+                                <p className="pgd-desc">Learn 2 New Looks every day (Makeup & Hairstyle) and extra surprises</p>
                             </div>
                         </div>
 
@@ -854,7 +862,7 @@ const KarmaLandingPage = () => {
                             <div className="pgd-circle"><span className="pgd-num">05</span></div>
                             <div className="pgd-content">
                                 <h3 className="pgd-title">Business & Portfolio</h3>
-                                <p className="pgd-desc">Learn client acquisition, pricing strategies, social media branding, and professional photography.</p>
+                                <p className="pgd-desc">Learn 2 New Looks every day (Makeup & Hairstyle) and extra surprises</p>
                             </div>
                         </div>
                     </div>
@@ -936,16 +944,16 @@ const KarmaLandingPage = () => {
                             <img alt="Karma International" className="about-ki-img" src="/images/about_img.jpeg" />
                         </div>
                         <div className="about-ki-content-col">
-                            <p className="about-ki-eyebrow">ABOUT KARMA INTERNATIONAL</p>
-                            <h2 className="about-ki-title">Meet <em>Karma International</em></h2>
-                            <p className="about-ki-desc">Karma International is a premier global fashion, style, and lifestyle platform. Over the years, we have hosted prestigious fashion awards, grand carnivals, industry seminars, and specialized masterclass training sessions designed to elevate makeup artists, hair stylists, and beauty entrepreneurs.</p><p className="about-ki-mission"><em>Mission:</em> To train and certify passionate beauty professionals globally.</p>
+                            <p className="about-ki-eyebrow">ABOUT Anjana Roy</p>
+                            <span className="about-ki-title">Meet <em>Anjana Roy</em></span>
+                            <p className="about-ki-desc">Anjana Roy is the Founder & Director of Karma Internationals, a leading platform dedicated to beauty, fashion, education, and talent recognition. Through international carnivals, masterclasses, and award shows, she has created opportunities for artists and professionals to learn, grow, and gain global recognition. Her vision, leadership, and commitment to empowering talent have made Karma Internationals a trusted name in the beauty and creative industry.</p><p className="about-ki-mission"><em>Mission:</em> To train and certify passionate beauty professionals globally.</p>
                             <div className="about-ki-divider"></div>
                             <div className="about-ki-stats-grid">
                                 <div className="about-ki-stat-card">
                                     <div className="about-ki-stat-val">27+</div>
                                     <div className="about-ki-stat-label">Years of Fashion & Styling Excellence</div>
                                 </div>
-                                <div className="about-ki-stat-card"><div className="about-ki-stat-val">100+</div><div className="about-ki-stat-label">Awards & Grand Carnivals Hosted</div></div><div className="about-ki-stat-card"><div className="about-ki-stat-val">3lacs+</div><div className="about-ki-stat-label">Students Trained in Seminars &amp; Classes</div></div><div className="about-ki-stat-card"><div className="about-ki-stat-val">14.2k+</div><div className="about-ki-stat-label">Active Global Community Followers</div></div></div></div></div></div></section>
+                                <div className="about-ki-stat-card"><div className="about-ki-stat-val">100+</div><div className="about-ki-stat-label"> Grand Carnivals Hosted</div></div><div className="about-ki-stat-card"><div className="about-ki-stat-val">3lacs+</div><div className="about-ki-stat-label">Students Trained in Seminars &amp; Classes</div></div><div className="about-ki-stat-card"><div className="about-ki-stat-val">14.2k+</div><div className="about-ki-stat-label">Active Global Community Followers</div></div></div></div></div></div></section>
 
 
 
@@ -994,7 +1002,7 @@ const KarmaLandingPage = () => {
                                     <ul className="tnc-list">
                                         <li><span className="tnc-bullet">•</span> Booking amount is non-refundable & non-adjustable</li>
                                         <li><span className="tnc-bullet">•</span> Full advance payment required</li>
-                                        <li><span className="tnc-bullet">•</span> Seats will be allocated on a first-come, first-served basis<br />early bookings get front-row access.</li>
+                                        <li><span className="tnc-bullet">•</span> Seats will be allocated on a first-come, first-served basis.  <br />Early bookings get front-row access.</li>
                                     </ul>
                                 </div>
                             </div>

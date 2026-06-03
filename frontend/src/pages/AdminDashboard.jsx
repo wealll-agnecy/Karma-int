@@ -100,13 +100,24 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Mobile metrics */}
-                <div className="d-md-none" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '18px' }}>
-                    {[...topMetrics, { label: 'Enquiries', value: liveStats.totalEnquiries || 0, sub: 'View Inbox', accent: '#f59e0b' }].map((m, i) => (
-                        <div key={i} style={{ ...P.card, padding: '12px 10px', textAlign: 'center', borderRadius: '16px' }}>
-                            <div style={{ ...P.label, fontSize: '0.52rem', marginBottom: '6px' }}>{m.label}</div>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e1b2e', letterSpacing: '-0.5px' }}>{m.value}</div>
-                        </div>
-                    ))}
+                <div className="d-md-none" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '8px', marginBottom: '18px' }}>
+                    {[...topMetrics, { label: 'Enquiries', value: liveStats.totalEnquiries || 0, sub: 'View Inbox', accent: '#f59e0b', link: '/admin/enquiries' }].map((m, i) => {
+                        const cardContent = (
+                            <div style={{ ...P.card, padding: '12px 10px', textAlign: 'center', borderRadius: '16px', height: '100%' }}>
+                                <div style={{ ...P.label, fontSize: '0.52rem', marginBottom: '6px' }}>{m.label}</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e1b2e', letterSpacing: '-0.5px' }}>{m.value}</div>
+                            </div>
+                        );
+                        return m.link ? (
+                            <Link key={i} to={m.link} style={{ textDecoration: 'none', gridColumn: 'span 2' }}>
+                                {cardContent}
+                            </Link>
+                        ) : (
+                            <div key={i} style={{ gridColumn: 'auto' }}>
+                                {cardContent}
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Intelligence Panels */}
@@ -114,7 +125,7 @@ const AdminDashboard = () => {
                     <Col xs={12} lg={4}>
                         <Row className="g-4 h-100">
                             {/* Net Profit */}
-                            <Col xs={6} lg={12}>
+                            <Col xs={12} lg={12}>
                                 <div style={{ ...P.card, background: 'linear-gradient(145deg,#1e1b2e,#2d2a4a)', color: '#fff', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                     <div>
                                         <span style={{ ...P.label, color: 'rgba(255,255,255,0.5)' }}>Net Profit</span>
@@ -136,7 +147,7 @@ const AdminDashboard = () => {
                                 </div>
                             </Col>
                             {/* Moderation */}
-                            <Col xs={6} lg={12}>
+                            <Col xs={12} lg={12}>
                                 <div style={{ ...P.card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                                     <span style={{ ...P.label, alignSelf: 'flex-start', marginBottom: '16px' }}>Moderation</span>
                                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg,#10b981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', boxShadow: '0 8px 20px #10b98130' }}>
@@ -168,7 +179,7 @@ const AdminDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <div className="expense-form-container" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                                     <input type="text" placeholder="Description" style={{ flex: 2, minWidth: '100px', padding: '10px 14px', border: '1.5px solid #ede8f4', borderRadius: '12px', background: '#f8f7fc', fontSize: '0.82rem', outline: 'none' }} />
                                     <input type="number" placeholder="Amount" style={{ flex: 1, minWidth: '80px', padding: '10px 14px', border: '1.5px solid #ede8f4', borderRadius: '12px', background: '#f8f7fc', fontSize: '0.82rem', outline: 'none' }} />
                                     <select style={{ flex: 1, minWidth: '80px', padding: '10px 14px', border: '1.5px solid #ede8f4', borderRadius: '12px', background: '#f8f7fc', fontSize: '0.82rem', outline: 'none' }}>
@@ -177,6 +188,7 @@ const AdminDashboard = () => {
                                     </select>
                                     <button style={{ background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '0.78rem', padding: '10px 20px', cursor: 'pointer', whiteSpace: 'nowrap' }}>ADD</button>
                                 </div>
+
                             </div>
 
                             {/* Revenue Intelligence Chart */}
@@ -212,7 +224,8 @@ const AdminDashboard = () => {
                         <h5 style={P.sectionTitle}>Events CMS System</h5>
                         <span style={P.tag}>Content Management</span>
                     </div>
-                    <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #ede8f4' }}>
+                    {/* Desktop Table View */}
+                    <div className="d-none d-md-block" style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #ede8f4' }}>
                         <Table className="m-0 align-middle">
                             <thead>
                                 <tr style={{ background: '#f8f7fc' }}>
@@ -242,6 +255,26 @@ const AdminDashboard = () => {
                                 )}
                             </tbody>
                         </Table>
+                    </div>
+
+                    {/* Mobile CMS List View */}
+                    <div className="d-block d-md-none" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {events.map((ev) => (
+                            <div key={ev._id} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: '#f8f7fc', borderRadius: '16px', border: '1px solid #ede8f4' }}>
+                                <div style={{ fontWeight: 600, color: '#1e1b2e', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                    {ev.title}
+                                </div>
+                                <button
+                                    onClick={() => { setSelectedEventToEdit(ev); setEditorOpen(true); }}
+                                    style={{ background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 600, fontSize: '0.78rem', padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}
+                                >
+                                    <FaEdit size={11} /> Edit Content
+                                </button>
+                            </div>
+                        ))}
+                        {events.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af', fontSize: '0.85rem' }}>No events found</div>
+                        )}
                     </div>
                 </div>
 

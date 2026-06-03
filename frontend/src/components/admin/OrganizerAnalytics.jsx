@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Row, Col, Card, Badge, Table, ProgressBar, Spinner } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTicketAlt, FaMoneyBillWave, FaChartLine, FaStar, FaClock, FaHistory } from 'react-icons/fa';
+import { FaTicketAlt, FaMoneyBillWave, FaChartLine, FaStar, FaClock, FaHistory, FaCheckCircle, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import * as analyticsApi from '../../api/analyticsApi';
 import { formatCurrency } from '../../utils/formatUtils';
@@ -71,6 +71,9 @@ const OrganizerAnalytics = ({ eventId, organizerId, totalCapacity = 0 }) => {
                     ...raw,
                     totalTickets: specData?.totalTickets || raw?.totalTickets || 0,
                     totalRevenue: specData?.totalRevenue || raw?.totalRevenue || 0,
+                    successfulPayments: specData?.successfulPayments || raw?.successfulPayments || 0,
+                    failedPayments: specData?.failedPayments || raw?.failedPayments || 0,
+                    refunds: specData?.refunds || raw?.refunds || 0,
                     mostSold: raw?.mostSold || 'N/A',
                     status: raw?.status || 'Active',
                     breakdown: realBreakdown,
@@ -128,6 +131,9 @@ const OrganizerAnalytics = ({ eventId, organizerId, totalCapacity = 0 }) => {
     const displayStats = useMemo(() => stats || {
         totalTickets: 0,
         totalRevenue: 0,
+        successfulPayments: 0,
+        failedPayments: 0,
+        refunds: 0,
         mostSold: 'N/A',
         status: 'Offline',
         breakdown: []
@@ -175,10 +181,10 @@ const OrganizerAnalytics = ({ eventId, organizerId, totalCapacity = 0 }) => {
             {/* 1. Stats Cards */}
             <Row className="g-3 mb-4">
                 {[
-                    { title: 'Total Tickets Sold', value: displayStats.totalTickets, icon: <FaTicketAlt />, color: '#6a11cb' },
                     { title: 'Total Revenue', value: formatCurrency(displayStats.totalRevenue), icon: <FaMoneyBillWave />, color: '#2575fc' },
-                    { title: 'Most Sold', value: displayStats.mostSold, icon: <FaStar />, color: '#f59e0b' },
-                    { title: 'Pulse Status', value: displayStats.status, icon: <FaClock />, color: '#10b981' }
+                    { title: 'Successful Payments', value: displayStats.successfulPayments, icon: <FaCheckCircle />, color: '#10b981' },
+                    { title: 'Failed Payments', value: displayStats.failedPayments, icon: <FaTimesCircle />, color: '#ef4444' },
+                    { title: 'Refunds', value: displayStats.refunds, icon: <FaUndo />, color: '#f59e0b' }
                 ].map((stat, idx) => (
                     <Col xs={12} sm={6} lg={3} key={idx} className="mb-3 mb-lg-0">
                         <motion.div

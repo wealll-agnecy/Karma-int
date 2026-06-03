@@ -163,7 +163,17 @@ exports.generateTicketPDF = async (ticketId) => {
             const qrY = 340;
             
             const baseUrl = process.env.PUBLIC_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : 'https://growthutsav.com'); 
-            const verificationUrl = `${baseUrl}/ticket/${ticket.uuid}`;
+            
+            const jwt = require('jsonwebtoken');
+            const tokenPayload = {
+                ticketId: ticket.uuid,
+                attendeeId: ticket.user ? ticket.user._id.toString() : 'N/A',
+                orderId: (ticket.booking && ticket.booking.payments && ticket.booking.payments[0]) ? ticket.booking.payments[0].orderId : (ticket.booking ? ticket.booking.orderId : 'N/A'),
+                paymentId: (ticket.booking && ticket.booking.payments && ticket.booking.payments[0]) ? ticket.booking.payments[0].paymentId : (ticket.booking ? ticket.booking.paymentId : 'N/A')
+            };
+            const secureToken = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'fallback_secret');
+            
+            const verificationUrl = `${baseUrl}/ticket/${secureToken}`;
             
             const qrBuffer = await QRCode.toBuffer(verificationUrl, { 
                 width: qrSize,

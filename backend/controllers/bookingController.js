@@ -144,147 +144,154 @@ exports.checkout = async (req, res) => {
     }
 };
 
-// @desc    Verify Payment & Finalize Booking
+// @desc    Verify Payment & Finalize Booking (DEPRECATED - Moved to paymentController)
 // @route   POST /api/v1/bookings/verify
 exports.verifyPayment = async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId, amount } = req.body;
-        const booking = await Booking.findById(bookingId).populate('event', 'title date venue bannerImage foodSettings addonsSettings isMultiDay multiDayPlan ticketTypes organizer');
-        if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
-
-        // If amount is not passed, we fallback to totalAmount (assume full payment)
-        // However, if it's a partial payment flow, the frontend SHOULD pass the amount.
-        const amountFromOrder = amount || booking.totalAmount; 
-
-        booking.amountPaid = (booking.amountPaid || 0) + parseFloat(amountFromOrder);
-        booking.paymentStatus = booking.amountPaid >= booking.totalAmount ? 'completed' : 'partial';
-        
-        booking.payments.push({
-            amount: parseFloat(amountFromOrder),
-            paymentId: razorpay_payment_id || "DEMO_PAY_" + Date.now(),
-            orderId: razorpay_order_id,
-            date: new Date()
-        });
-
-        // ATOMIC INVENTORY UPDATE
-        // We use atomic update filters to guarantee no double-booking even under 100k concurrent requests
-        const quantityToBuy = booking.quantity || 1;
-        
-        if (booking.event.isMultiDay && booking.selectedDays?.length > 0) {
-            const updatedDays = [];
-            try {
-                for (const dayDate of booking.selectedDays) {
-                    const planName = (booking.selectedPlans && booking.selectedPlans[dayDate]) || booking.ticketType;
-                    
-                    const eventDoc = await Event.findById(booking.event._id);
-                    const day = eventDoc.multiDayPlan.find(d => new Date(d.date).toDateString() === new Date(dayDate).toDateString());
-                    if (!day) throw new Error("Invalid date");
-                    const dayTier = day.plans.find(p => p.name === planName);
-                    if (!dayTier) throw new Error("Plan not found");
-
-                    const updateRes = await Event.findOneAndUpdate(
-                        { 
-                            _id: booking.event._id, 
-                            "multiDayPlan": {
-                                $elemMatch: {
-                                    date: new Date(dayDate),
-                                    "plans": { 
-                                        $elemMatch: { 
-                                            name: planName,
-                                            sold: { $lte: dayTier.quantity - quantityToBuy }
-                                        } 
-                                    }
-                                }
-                            }
-                        },
-                        { $inc: { "multiDayPlan.$[day].plans.$[plan].sold": quantityToBuy } },
-                        { 
-                            arrayFilters: [ { "day.date": new Date(dayDate) }, { "plan.name": planName } ],
-                            new: true 
-                        }
-                    );
-                    if (!updateRes) {
-                        throw new Error(`Sold out or invalid plan for date ${new Date(dayDate).toDateString()}`);
-                    }
-                    updatedDays.push({ dayDate, planName });
-                }
-            } catch (err) {
-                // Rollback successfully decremented inventories to prevent data corruption
-                for (const updated of updatedDays) {
-                    await Event.findOneAndUpdate(
-                        { _id: booking.event._id },
-                        { $inc: { "multiDayPlan.$[day].plans.$[plan].sold": -quantityToBuy } },
-                        { arrayFilters: [ { "day.date": new Date(updated.dayDate) }, { "plan.name": updated.planName } ] }
-                    );
-                }
-                throw err;
-            }
-        } else {
-            // Single-day logic
-            const eventDoc = await Event.findById(booking.event._id);
-            const tier = eventDoc.ticketTypes.find(t => t.name === booking.ticketType);
-            if (!tier) throw new Error("Ticket tier not found");
-
-            const updateRes = await Event.findOneAndUpdate(
-                { 
-                    _id: booking.event._id, 
-                    "ticketTypes": { 
-                        $elemMatch: { 
-                            name: booking.ticketType,
-                            sold: { $lte: tier.quantity - quantityToBuy }
-                        } 
-                    }
-                },
-                { $inc: { "ticketTypes.$[tier].sold": quantityToBuy } },
-                { arrayFilters: [ { "tier.name": booking.ticketType } ], new: true }
-            );
-            if (!updateRes) throw new Error("This ticket tier is now sold out.");
-        }
-
-        // Save booking status to DB first so ticket generator sees correct amountPaid/paymentStatus
-        await booking.save();
-
-        console.log(`[PDF] [PDF] Generating tickets for booking ${booking._id}...`);
-        const ticket = await createTicketAfterPayment(booking._id, booking.event._id, booking.user);
-        console.log(`✅ [PDF] Primary ticket generated successfully: ${ticket._id}`);
-
-        // Save ticket link
-        booking.ticketId = ticket._id;
-        await booking.save();
-
-        // Retrieve all tickets created for this booking
-        const Ticket = require('../models/Ticket');
-        const tickets = await Ticket.find({ booking: booking._id });
-
-        // Queue all tickets for background PDF generation & dispatch
-        const { ticketQueue } = require('../queue/ticketQueue');
-        for (const t of tickets) {
-            await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
-        }
-
-        // Queue Event Reminders
-        const { scheduleReminders } = require('../queue/notificationQueue');
-        await scheduleReminders(booking.user, booking.event._id, booking.event.date);
-
-        // CREATE NOTIFICATION FOR ORGANIZER
-        try {
-            const notifType = booking.paymentStatus === 'completed' ? 'booking_confirmed' : 'system';
-            const notifTitle = booking.paymentStatus === 'completed' ? 'Full Payment Received & Ticket Booked' : 'Partial Payment Received & Ticket Booked';
-            await Notification.create({
-                user: booking.event.organizer,
-                title: notifTitle,
-                message: `An attendee just booked a ticket for ${booking.event.title}. Amount Paid: ₹${amountFromOrder}.`,
-                type: notifType,
-                eventId: booking.event._id
-            });
-        } catch (notifErr) {
-            console.error("Failed to create organizer notification:", notifErr);
-        }
-
-        res.status(200).json({ success: true, message: "Booking successful", ticketId: ticket._id });
+        const result = await exports.finalizeBookingInternally(bookingId, amount, razorpay_payment_id, razorpay_order_id);
+        res.status(200).json({ success: true, message: "Booking successful", ticketId: result.ticketId });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
+};
+
+/**
+ * INTERNAL METHOD: Finalize booking, generate tickets, update inventory.
+ * MUST ONLY be called AFTER cryptographic signature verification passes.
+ */
+exports.finalizeBookingInternally = async (bookingId, amountFromOrder, razorpay_payment_id, razorpay_order_id) => {
+    // ATOMIC LOCK: Only proceed if it is strictly pending.
+    // Transition to processing state to block concurrent webhooks/frontend verifications
+    const booking = await Booking.findOneAndUpdate(
+        { _id: bookingId, paymentStatus: 'pending' },
+        { $set: { paymentStatus: 'processing' } },
+        { new: true }
+    ).populate('event', 'title date venue bannerImage foodSettings addonsSettings isMultiDay multiDayPlan ticketTypes organizer');
+
+    if (!booking) {
+        throw new Error("Booking already processed, not found, or invalid state");
+    }
+
+    amountFromOrder = amountFromOrder || booking.totalAmount;
+
+    booking.amountPaid = (booking.amountPaid || 0) + parseFloat(amountFromOrder);
+    booking.paymentStatus = booking.amountPaid >= booking.totalAmount ? 'completed' : 'partial';
+    
+    booking.payments.push({
+        amount: parseFloat(amountFromOrder),
+        paymentId: razorpay_payment_id || "DEMO_PAY_" + Date.now(),
+        orderId: razorpay_order_id,
+        date: new Date()
+    });
+
+    // ATOMIC INVENTORY UPDATE
+    const quantityToBuy = booking.quantity || 1;
+    
+    if (booking.event.isMultiDay && booking.selectedDays?.length > 0) {
+        const updatedDays = [];
+        try {
+            for (const dayDate of booking.selectedDays) {
+                const planName = (booking.selectedPlans && booking.selectedPlans[dayDate]) || booking.ticketType;
+                
+                const eventDoc = await Event.findById(booking.event._id);
+                const day = eventDoc.multiDayPlan.find(d => new Date(d.date).toDateString() === new Date(dayDate).toDateString());
+                if (!day) throw new Error("Invalid date");
+                const dayTier = day.plans.find(p => p.name === planName);
+                if (!dayTier) throw new Error("Plan not found");
+
+                const updateRes = await Event.findOneAndUpdate(
+                    { 
+                        _id: booking.event._id, 
+                        "multiDayPlan": {
+                            $elemMatch: {
+                                date: new Date(dayDate),
+                                "plans": { 
+                                    $elemMatch: { 
+                                        name: planName,
+                                        sold: { $lte: dayTier.quantity - quantityToBuy }
+                                    } 
+                                }
+                            }
+                        }
+                    },
+                    { $inc: { "multiDayPlan.$[day].plans.$[plan].sold": quantityToBuy } },
+                    { 
+                        arrayFilters: [ { "day.date": new Date(dayDate) }, { "plan.name": planName } ],
+                        new: true 
+                    }
+                );
+                if (!updateRes) {
+                    throw new Error(`Sold out or invalid plan for date ${new Date(dayDate).toDateString()}`);
+                }
+                updatedDays.push({ dayDate, planName });
+            }
+        } catch (err) {
+            for (const updated of updatedDays) {
+                await Event.findOneAndUpdate(
+                    { _id: booking.event._id },
+                    { $inc: { "multiDayPlan.$[day].plans.$[plan].sold": -quantityToBuy } },
+                    { arrayFilters: [ { "day.date": new Date(updated.dayDate) }, { "plan.name": updated.planName } ] }
+                );
+            }
+            throw err;
+        }
+    } else {
+        const eventDoc = await Event.findById(booking.event._id);
+        const tier = eventDoc.ticketTypes.find(t => t.name === booking.ticketType);
+        if (!tier) throw new Error("Ticket tier not found");
+
+        const updateRes = await Event.findOneAndUpdate(
+            { 
+                _id: booking.event._id, 
+                "ticketTypes": { 
+                    $elemMatch: { 
+                        name: booking.ticketType,
+                        sold: { $lte: tier.quantity - quantityToBuy }
+                    } 
+                }
+            },
+            { $inc: { "ticketTypes.$[tier].sold": quantityToBuy } },
+            { arrayFilters: [ { "tier.name": booking.ticketType } ], new: true }
+        );
+        if (!updateRes) throw new Error("This ticket tier is now sold out.");
+    }
+
+    await booking.save();
+
+    console.log(`[PDF] Generating tickets for booking ${booking._id}...`);
+    const ticket = await createTicketAfterPayment(booking._id, booking.event._id, booking.user);
+    console.log(`✅ [PDF] Primary ticket generated successfully: ${ticket._id}`);
+
+    booking.ticketId = ticket._id;
+    await booking.save();
+
+    const Ticket = require('../models/Ticket');
+    const tickets = await Ticket.find({ booking: booking._id });
+
+    const { ticketQueue } = require('../queue/ticketQueue');
+    for (const t of tickets) {
+        await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
+    }
+
+    const { scheduleReminders } = require('../queue/notificationQueue');
+    await scheduleReminders(booking.user, booking.event._id, booking.event.date);
+
+    try {
+        const notifType = booking.paymentStatus === 'completed' ? 'booking_confirmed' : 'system';
+        const notifTitle = booking.paymentStatus === 'completed' ? 'Full Payment Received & Ticket Booked' : 'Partial Payment Received & Ticket Booked';
+        await Notification.create({
+            user: booking.event.organizer,
+            title: notifTitle,
+            message: `An attendee just booked a ticket for ${booking.event.title}. Amount Paid: ₹${amountFromOrder}.`,
+            type: notifType,
+            eventId: booking.event._id
+        });
+    } catch (notifErr) {
+        console.error("Failed to create organizer notification:", notifErr);
+    }
+
+    return { success: true, ticketId: ticket._id };
 };
 
 // @desc    Demo Booking (Bypass Payment)
@@ -543,68 +550,87 @@ exports.initiateInstallment = async (req, res) => {
     }
 };
 
-// @desc    Verify Installment Payment
+// @desc    Verify Installment Payment (DEPRECATED - Moved to paymentController)
 // @route   POST /api/v1/bookings/verify-installment
 exports.verifyInstallment = async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, bookingId, amount } = req.body;
-        const booking = await Booking.findById(bookingId).populate('event', 'title date venue bannerImage organizer');
-        if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
-
-        booking.amountPaid = (booking.amountPaid || 0) + parseFloat(amount);
-        booking.paymentStatus = booking.amountPaid >= booking.totalAmount ? 'completed' : 'partial';
-        
-        booking.payments.push({
-            amount: parseFloat(amount),
-            paymentId: razorpay_payment_id || "DEMO_PAY_" + Date.now(),
-            orderId: razorpay_order_id,
-            date: new Date()
-        });
-
-        console.log(`✅ [PAYMENT] Installment Verified! Amount: ${amount}, Booking: ${bookingId}`);
-        await booking.save();
-
-        // Sync Ticket Financials for ALL tickets
-        const Ticket = require('../models/Ticket');
-        const tickets = await Ticket.find({ booking: booking._id });
-        for (const t of tickets) {
-            t.amountPaid = booking.amountPaid;
-            t.paymentStatus = booking.paymentStatus === 'completed' ? 'PAID' : 'PARTIAL';
-            await t.save();
-        }
-
-        // Queue all tickets for delivery if the payment is complete
-        if (booking.paymentStatus === 'completed') {
-            const { ticketQueue } = require('../queue/ticketQueue');
-            for (const t of tickets) {
-                await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
-            }
-        }
-
-        // CREATE NOTIFICATION FOR ORGANIZER
-        try {
-            const notifType = booking.paymentStatus === 'completed' ? 'booking_confirmed' : 'system';
-            const notifTitle = booking.paymentStatus === 'completed' ? 'Full Payment Completed' : 'Installment Received';
-            await Notification.create({
-                user: booking.event.organizer,
-                title: notifTitle,
-                message: `An attendee just paid an installment for ${booking.event.title}. Amount Paid: ₹${amount}.`,
-                type: notifType,
-                eventId: booking.event._id
-            });
-        } catch (notifErr) {
-            console.error("Failed to create organizer notification:", notifErr);
-        }
-
+        const result = await exports.finalizeInstallmentInternally(bookingId, amount, razorpay_payment_id, razorpay_order_id);
         res.status(200).json({ 
             success: true, 
             message: "Payment updated", 
-            amountPaid: booking.amountPaid,
-            ticketId: booking.ticketId 
+            amountPaid: result.amountPaid,
+            ticketId: result.ticketId 
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
+};
+
+/**
+ * INTERNAL METHOD: Finalize installment, generate tickets.
+ * MUST ONLY be called AFTER cryptographic signature verification passes.
+ */
+exports.finalizeInstallmentInternally = async (bookingId, amount, razorpay_payment_id, razorpay_order_id) => {
+    // ATOMIC LOCK: Only proceed if it is strictly partial.
+    // Transition to processing state to block concurrent webhooks/frontend verifications
+    const booking = await Booking.findOneAndUpdate(
+        { _id: bookingId, paymentStatus: 'partial' },
+        { $set: { paymentStatus: 'processing_installment' } },
+        { new: true }
+    ).populate('event', 'title date venue bannerImage organizer');
+
+    if (!booking) {
+        throw new Error("Booking already processed, not found, or invalid state");
+    }
+
+    booking.amountPaid = (booking.amountPaid || 0) + parseFloat(amount);
+    booking.paymentStatus = booking.amountPaid >= booking.totalAmount ? 'completed' : 'partial';
+    
+    booking.payments.push({
+        amount: parseFloat(amount),
+        paymentId: razorpay_payment_id || "DEMO_PAY_" + Date.now(),
+        orderId: razorpay_order_id,
+        date: new Date()
+    });
+
+    console.log(`✅ [PAYMENT] Installment Verified! Amount: ${amount}, Booking: ${bookingId}`);
+    await booking.save();
+
+    const Ticket = require('../models/Ticket');
+    const tickets = await Ticket.find({ booking: booking._id });
+    for (const t of tickets) {
+        t.amountPaid = booking.amountPaid;
+        t.paymentStatus = booking.paymentStatus === 'completed' ? 'PAID' : 'PARTIAL';
+        await t.save();
+    }
+
+    if (booking.paymentStatus === 'completed') {
+        const { ticketQueue } = require('../queue/ticketQueue');
+        for (const t of tickets) {
+            await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
+        }
+    }
+
+    try {
+        const notifType = booking.paymentStatus === 'completed' ? 'booking_confirmed' : 'system';
+        const notifTitle = booking.paymentStatus === 'completed' ? 'Full Payment Completed' : 'Installment Received';
+        await Notification.create({
+            user: booking.event.organizer,
+            title: notifTitle,
+            message: `An attendee just paid an installment for ${booking.event.title}. Amount Paid: ₹${amount}.`,
+            type: notifType,
+            eventId: booking.event._id
+        });
+    } catch (notifErr) {
+        console.error("Failed to create organizer notification:", notifErr);
+    }
+
+    return { 
+        success: true, 
+        amountPaid: booking.amountPaid,
+        ticketId: booking.ticketId 
+    };
 };
 
 // @desc    Resend Ticket Email

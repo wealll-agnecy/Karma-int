@@ -444,4 +444,64 @@
   .booking_btn_grid button {
     border: 2px solid #000 !important;
   }
+
+  /* --- Mobile Stack Style for Stat Cards --- */
+  .attendee-stat-card .d-flex {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 6px !important;
+  }
+
+  .attendee-stat-card .icon-box-premium {
+    margin-bottom: 6px !important;
+    margin-right: 0 !important;
+  }
+
+  .attendee-stat-card h5 {
+    font-size: 1rem !important;
+    margin: 0 !important;
+  }
+  
+  .attendee-stat-card h6.tiny-text {
+    margin-bottom: 2px !important;
+  }
+
+  /* --- Mobile Stack Style for Add Expenses form --- */
+  .expense-form-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  .expense-form-container input,
+  .expense-form-container select,
+  .expense-form-container button {
+    width: 100% !important;
+    min-width: 100% !important;
+    flex: none !important;
+  }
+}
+
+/* --- Mobile/Tablet Payment Summary Stack Borders --- */
+@media (max-width: 575px) {
+  .border-top-mobile {
+    border-top: 1px solid #ede8f4 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  .border-bottom-mobile {
+    border-bottom: 1px solid #ede8f4 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+}
+
+@media (min-width: 576px) {
+  .border-sm-start {
+    border-left: 1px solid #ede8f4 !important;
+  }
+  .border-sm-end {
+    border-right: 1px solid #ede8f4 !important;
+  }
 }

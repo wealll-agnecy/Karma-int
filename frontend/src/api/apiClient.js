@@ -33,7 +33,25 @@ apiClient.interceptors.response.use(
         }
         return response;
     },
-    (error) => {
+    async (error) => {
+        const config = error.config;
+        
+        // --- API RETRY MECHANISM (Phase 13) ---
+        if (config) {
+            config.retryCount = config.retryCount || 0;
+            const MAX_RETRIES = 3;
+            // Retry on Network Error (no response) or Server Error (5xx)
+            const isRetryable = !error.response || (error.response.status >= 500 && error.response.status <= 599);
+            
+            if (isRetryable && config.retryCount < MAX_RETRIES) {
+                config.retryCount += 1;
+                const delay = Math.pow(2, config.retryCount) * 500; // Exponential backoff: 1s, 2s, 4s
+                console.warn(`🔄 API Retry ${config.retryCount}/${MAX_RETRIES} for ${config.url} after ${delay}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return apiClient(config);
+            }
+        }
+
         // Handle session expiry
         if (error.response?.status === 401) {
             console.warn("🔒 Connectivity Protocol Breach: Auto-purging stale identifiers.");

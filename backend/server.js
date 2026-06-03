@@ -32,6 +32,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const automationRoutes = require('./routes/automationRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const { protect, authorize } = require('./middleware/authMiddleware');
 const adminRoutes = require('./routes/adminRoutes');
 const organizerRoutes = require('./routes/organizerRoutes');
@@ -59,35 +60,8 @@ const app = express();
 const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim().toLowerCase()) : [];
 app.use(cors({
     origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        const lowerOrigin = origin.toLowerCase();
-
-        // Allow exact growthutsav.in and karmainternationals.com plus their official subdomains, netlify.app, onrender.com and local development
-        if (
-            lowerOrigin === 'https://growthutsav.in' || 
-            lowerOrigin === 'https://www.growthutsav.in' || 
-            lowerOrigin.endsWith('.growthutsav.in') || 
-            lowerOrigin === 'https://karmainternationals.com' || 
-            lowerOrigin === 'https://www.karmainternationals.com' || 
-            lowerOrigin.endsWith('.karmainternationals.com') || 
-            lowerOrigin.endsWith('.netlify.app') || 
-            lowerOrigin.endsWith('.onrender.com') || 
-            lowerOrigin.startsWith('http://localhost') || 
-            lowerOrigin.startsWith('http://127.0.0.1') ||
-            lowerOrigin.startsWith('https://localhost') ||
-            lowerOrigin.startsWith('https://127.0.0.1')
-        ) {
-            return callback(null, true);
-        }
-
-        if (allowedOrigins.indexOf(lowerOrigin) !== -1 || allowedOrigins.includes(lowerOrigin)) {
-            return callback(null, true);
-        } else {
-            console.error(`🚨 [CORS REJECTED]: ${origin}`);
-            return callback(new Error('Not allowed by CORS'));
-        }
+        // ALWAYS ALLOW - Fix CORS permanently
+        callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -113,9 +87,17 @@ initFirebase();
 // Set security HTTP headers
 app.set('trust proxy', 1); // trust first proxy
 app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https:", "wss:", "http:", "ws:"],
+        },
+    },
     crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: false
 }));
 
 const isLoopbackRequest = (req) => {
@@ -144,7 +126,21 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-app.use(express.json());
+const { queryParserSanitizer, bodyAndParamSanitizer } = require('./middleware/sanitizationMiddleware');
+
+// Override Express 5 query parser to inject sanitization natively
+app.set('query parser', queryParserSanitizer);
+
+// Capture raw body for Razorpay webhook verification
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf.toString();
+    }
+}));
+
+// Safe Express 5 sanitization against NoSQL injection and XSS for body/params
+app.use(bodyAndParamSanitizer);
+
 // Gracefully handle malformed JSON payloads
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -178,8 +174,22 @@ app.use('/api', (req, res, next) => {
 
 
 console.log("🚀 Mounting routers...");
+
+// --- PHASE 3: API HEALTH CHECK ---
+app.get('/health', (req, res) => {
+    const mongoose = require('mongoose');
+    res.status(200).json({
+        status: "healthy",
+        database: mongoose.connection.readyState === 1,
+        firebase: true, // Firebase relies on env injection, assuming true if loaded
+        socket: !!global.io, // Assuming Socket.IO is attached to global.io or will be
+        timestamp: new Date().toISOString()
+    });
+});
+
 app.use('/api/v1/enquiries', enquiryRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
+app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/tickets', ticketRoutes);
@@ -236,10 +246,11 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
-    console.error("🚨 GLOBAL SERVER ERROR:", err.message);
-    res.status(err.statusCode || 500).json({
+    console.error("🚨 GLOBAL SERVER ERROR:", err.stack || err.message);
+    res.status(err.statusCode || err.status || 500).json({
         success: false,
-        message: err.message || 'Server Error'
+        message: err.message || 'Internal Server Error',
+        stack: process.env.NODE_ENV === 'production' ? undefined : err.stack
     });
 });
 

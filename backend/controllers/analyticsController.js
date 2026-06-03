@@ -39,13 +39,21 @@ exports.getEventAttendees = async (req, res) => {
             return acc;
         }, {});
 
+        const Payment = require('../models/Payment');
+        const payments = await Payment.find({ bookingId: { $in: bookingIds }, status: 'SUCCESS' }).lean();
+        const paymentMap = {};
+        payments.forEach(p => {
+            paymentMap[p.bookingId.toString()] = p;
+        });
+
         const enriched = bookings.map((booking) => {
             const ticket = ticketMap[booking._id.toString()];
             return {
                 ...booking.toObject(),
                 checkedIn: ticket ? ticket.scannedStatus : false,
                 scannedAt: ticket ? ticket.scannedAt : null,
-                ticketId: ticket ? ticket._id : null
+                ticketId: ticket ? ticket._id : null,
+                verifiedPayment: paymentMap[booking._id.toString()] || null
             };
         });
 
@@ -69,36 +77,56 @@ exports.getOrganizerStats = async (req, res) => {
         const myEvents = await Event.find({ organizer: organizerId }).select('_id').lean();
         const myEventIds = myEvents.map(e => e._id);
 
-        const [eventStats, revenueStats] = await Promise.all([
-            Event.aggregate([
+        const eventStats = await Event.aggregate([
                 { $match: { organizer: new mongoose.Types.ObjectId(organizerId) } },
                 { $facet: {
                     total:    [{ $count: 'n' }],
                     approved: [{ $match: { status: { $in: ['approved', 'live'] } } }, { $count: 'n' }],
                     capacity: [{ $unwind: '$ticketTypes' }, { $group: { _id: null, total: { $sum: '$ticketTypes.quantity' } } }]
                 }}
-            ]),
-            Booking.aggregate([
-                { $match: { event: { $in: myEventIds }, paymentStatus: { $in: ['completed', 'partial'] } } },
-                { $group: {
-                    _id: null,
-                    totalRevenue: { $sum: '$amountPaid' },   // actual collected cash
-                    totalTicketsSold: { $sum: '$quantity' }
-                }}
-            ])
+            ]);
+        const Payment = require('../models/Payment');
+        
+        const myBookings = await Booking.find({ event: { $in: myEventIds } }).select('_id').lean();
+        const myBookingIds = myBookings.map(b => b._id);
+        
+        const paymentsStats = await Payment.aggregate([
+            { $match: { bookingId: { $in: myBookingIds } } },
+            { $group: {
+                _id: '$status',
+                count: { $sum: 1 },
+                revenue: { $sum: { $cond: [{ $eq: ['$status', 'SUCCESS'] }, '$amount', 0] } }
+            }}
         ]);
+        
+        let successfulPayments = 0;
+        let failedPayments = 0;
+        let refunds = 0;
+        let totalRevenuePaise = 0;
+        
+        paymentsStats.forEach(stat => {
+            if (stat._id === 'SUCCESS') {
+                successfulPayments = stat.count;
+                totalRevenuePaise = stat.revenue;
+            } else if (stat._id === 'FAILED') {
+                failedPayments = stat.count;
+            } else if (stat._id === 'REFUNDED') {
+                refunds = stat.count;
+            }
+        });
 
         const stats = eventStats[0] || { total: [], approved: [], capacity: [] };
-        const rev = revenueStats[0] || { totalRevenue: 0, totalTicketsSold: 0 };
 
         res.status(200).json({
             success: true,
             data: {
                 totalEvents:      stats.total?.[0]?.n || 0,
                 approvedEvents:   stats.approved?.[0]?.n || 0,
-                totalRevenue:     rev.totalRevenue || 0,
-                totalTicketsSold: rev.totalTicketsSold || 0,
-                totalCapacity:    stats.capacity?.[0]?.total || 0
+                totalCapacity:    stats.capacity?.[0]?.total || 0,
+                totalRevenue:     totalRevenuePaise / 100, // Verified from Payment
+                successfulPayments,
+                failedPayments,
+                refunds
             }
         });
     } catch (err) {
@@ -133,9 +161,9 @@ exports.getAdminStats = async (req, res) => {
                 { $match: { paymentStatus: { $in: ['completed', 'partial'] } } },
                 { $group: { _id: null, total: { $sum: '$quantity' } } }
             ]),
-            Booking.aggregate([
-                { $match: { paymentStatus: { $in: ['completed', 'partial'] } } },
-                { $group: { _id: null, total: { $sum: '$amountPaid' } } }
+            Payment.aggregate([
+                { $match: { status: 'SUCCESS' } },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
             ]),
             Expense.aggregate([
                 { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -154,7 +182,7 @@ exports.getAdminStats = async (req, res) => {
         ]);
 
         const totalTicketsSold = ticketsAgg[0]?.total || 0;
-        const totalRevenue = revenueAgg[0]?.total || 0;
+        const totalRevenue = (revenueAgg[0]?.total || 0) / 100;
         const totalExpenses = expensesAgg[0]?.total || 0;
         const totalProfit = Math.max(0, totalRevenue - totalExpenses);
 
