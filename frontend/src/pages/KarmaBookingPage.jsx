@@ -59,7 +59,7 @@ export default function KarmaBookingPage() {
                 if (eventList && eventList.length > 0) {
                     setEventDetails(eventList[0]);
                 } else {
-                    console.warn('Backend responded but did not return a valid events list array. Using fallback schema.');
+                    // console.warn('Backend responded but did not return a valid events list array. Using fallback schema.');
                     setEventDetails({
                         _id: VALID_FALLBACK_ID,
                         title: "Karma International Basic to Advanced Master Class 2026",
