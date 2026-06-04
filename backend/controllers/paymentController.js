@@ -19,6 +19,7 @@ exports.createOrder = async (req, res, next) => {
         }
 
         const { order, payment } = await paymentService.initializePayment(userId, amount, currency, referenceData);
+        console.log(`[PAYMENT] Order created successfully: ${order.id} for amount ${amount} ${currency}`);
 
         res.status(200).json({
             success: true,
@@ -28,6 +29,7 @@ exports.createOrder = async (req, res, next) => {
             dbPaymentId: payment._id
         });
     } catch (error) {
+        console.error(`[PAYMENT_ERROR] Order creation failed: ${error.message}`);
         next(error);
     }
 };
@@ -67,7 +69,7 @@ exports.verifyPayment = async (req, res, next) => {
                                 if (resObj && resObj.ticketId) finalizedTicketId = resObj.ticketId;
                             }
                         } catch (finalizeErr) {
-                            console.error("🚨 Booking Finalization Failed after Payment Success:", finalizeErr);
+                            console.error(`[PAYMENT_ERROR] Booking Finalization Failed after Payment Success for booking ${booking._id}:`, finalizeErr.message);
                             // We still return success for the payment, but warn about ticket generation
                             return res.status(200).json({ 
                                 success: true, 
@@ -81,9 +83,10 @@ exports.verifyPayment = async (req, res, next) => {
                     }
                 }
             }
-
+            console.log(`[PAYMENT] Payment verified successfully: ${razorpay_payment_id}`);
             res.status(200).json({ success: true, message: 'Payment verified successfully', payment, ticketId: finalizedTicketId });
         } else {
+            console.warn(`[PAYMENT] Verification failed for order ${razorpay_order_id} with signature ${razorpay_signature}`);
             res.status(400).json({ success: false, message: 'Payment signature verification failed' });
         }
     } catch (error) {
@@ -102,7 +105,7 @@ exports.webhook = async (req, res, next) => {
         const bodyStr = req.rawBody || JSON.stringify(req.body);
 
         if (!webhookSecret) {
-            console.error('🚨 Webhook Error: RAZORPAY_WEBHOOK_SECRET is not defined in environment variables');
+            console.error('[PAYMENT_ERROR] Webhook Error: RAZORPAY_WEBHOOK_SECRET is not defined in environment variables');
             return res.status(500).json({ success: false, message: 'Server configuration error' });
         }
         
@@ -112,17 +115,17 @@ exports.webhook = async (req, res, next) => {
 
         const isValid = razorpayService.verifyWebhookSignature(bodyStr, signature, webhookSecret);
         if (!isValid) {
-            console.error('🚨 Webhook Error: Invalid signature received');
+            console.error(`[PAYMENT_ERROR] Webhook Error: Invalid signature received. Signature: ${signature}`);
             return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
         }
 
         const { event, payload } = req.body;
         
         await paymentService.processWebhook(event, payload);
-
+        console.log(`[PAYMENT] Webhook processed successfully for event: ${event}`);
         res.status(200).json({ success: true });
     } catch (error) {
-        console.error('Webhook error:', error);
+        console.error(`[PAYMENT_ERROR] Webhook error: ${error.message}`);
         res.status(500).json({ success: false, message: 'Webhook processing failed' });
     }
 };

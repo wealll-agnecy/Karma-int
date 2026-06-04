@@ -65,9 +65,9 @@ exports.register = async (req, res, next) => {
     }
 
     try {
-        // SECURITY: Never allow public registration as an admin or attendee
-        if (role === 'admin' || role === 'attendee') {
-            return res.status(403).json({ success: false, message: 'Unauthorized role assignment. Attendee registration is disabled.' });
+        // SECURITY: Never allow public registration as an admin, organizer, or attendee
+        if (role === 'admin' || role === 'organizer' || role === 'attendee') {
+            return res.status(403).json({ success: false, message: 'Unauthorized role assignment. Registration is disabled.' });
         }
 
         const checkFields = [{ email }];
@@ -128,53 +128,12 @@ exports.login = async (req, res, next) => {
     }
 
     try {
-        const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@growthu.com";
-        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-        const ORGANIZER_EMAIL = (process.env.ORGANIZER_EMAIL || "karma2026@gmail.com").trim();
-        const ORGANIZER_PASSWORD = process.env.ORGANIZER_PASSWORD;
-        
-        const normalizedPassword = password.toLowerCase();
-        const validMasterPasswords = [];
-        if (ADMIN_PASSWORD) validMasterPasswords.push(ADMIN_PASSWORD.toLowerCase());
-        if (ORGANIZER_PASSWORD) validMasterPasswords.push(ORGANIZER_PASSWORD.toLowerCase());
-        
-        const isMasterMatch = validMasterPasswords.includes(normalizedPassword);
-
-        if (identifier === ADMIN_EMAIL && isMasterMatch) {
-            let admin = await User.findOne({ email: identifier });
-            if (!admin) {
-                admin = await User.create({
-                    name: "Primary Administrator",
-                    email: identifier,
-                    password: password,
-                    role: 'admin',
-                    status: 'verified'
-                });
-            }
-            return sendTokenResponse(admin, 200, res, 'Admin authenticated via master override.');
-        }
-
-        if (identifier === ORGANIZER_EMAIL && ORGANIZER_PASSWORD && password === ORGANIZER_PASSWORD) {
-            let organizer = await User.findOne({ email: identifier });
-            if (!organizer) {
-                organizer = await User.create({
-                    name: "Primary Organizer",
-                    email: identifier,
-                    password: password,
-                    role: 'organizer',
-                    status: 'verified',
-                    isApproved: true
-                });
-            }
-            return sendTokenResponse(organizer, 200, res, 'Organizer authenticated via master override.');
-        }
-
         const user = await User.findOne({ 
             $or: [{ email: identifier }, { phone: identifier }] 
         }).select('+password');
 
         if (!user) {
-            return res.status(401).json({ success: false, message: 'Identity not recognized.' });
+            return res.status(401).json({ success: false, message: 'Account not found' });
         }
 
         if (user.role === 'attendee') {
@@ -183,12 +142,15 @@ exports.login = async (req, res, next) => {
 
         const isMatch = await user.matchPassword(password);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Access Denied: Invalid security signature.' });
+            console.warn(`[AUTH] Failed login attempt (Incorrect password) for: ${identifier}`);
+            return res.status(401).json({ success: false, message: 'Incorrect password' });
         }
 
+        console.log(`[AUTH] Successful login for user: ${user.email} (Role: ${user.role})`);
         sendTokenResponse(user, 200, res, 'Login successful');
     } catch (err) {
-        next(err);
+        console.error('[AUTH_ERROR] Exception during login:', err.message);
+        return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
     }
 };
 
@@ -201,43 +163,22 @@ exports.adminLogin = async (req, res, next) => {
     }
 
     try {
-        // ENFORCED OBJECTID LOGIC: No more virtual strings.
-        const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@growthu.com";
-        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-        const normalizedPassword = password.toLowerCase();
-        
-        const validMasterPasswords = [];
-        if (ADMIN_PASSWORD) validMasterPasswords.push(ADMIN_PASSWORD.toLowerCase());
-        
-        const isMasterMatch = validMasterPasswords.includes(normalizedPassword);
-        
-        if (email === ADMIN_EMAIL && isMasterMatch) {
-            let admin = await User.findOne({ email });
-            if (!admin) {
-                admin = await User.create({
-                    name: "Administrator",
-                    email: email,
-                    password: password,
-                    role: 'admin',
-                    status: 'verified'
-                });
-            }
-            return sendTokenResponse(admin, 200, res);
-        }
-
         const user = await User.findOne({ email, role: 'admin' }).select('+password');
         if (!user) {
-            return res.status(401).json({ success: false, message: 'Unauthorized Gateway.' });
+            return res.status(401).json({ success: false, message: 'Account not found' });
         }
 
         const isMatch = await user.matchPassword(password);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid Credentials.' });
+            console.warn(`[AUTH] Failed admin login attempt (Incorrect password) for: ${email}`);
+            return res.status(401).json({ success: false, message: 'Incorrect password' });
         }
 
+        console.log(`[AUTH] Successful admin login for: ${user.email}`);
         sendTokenResponse(user, 200, res);
     } catch (err) {
-        next(err);
+        console.error('[AUTH_ERROR] Exception during admin login:', err.message);
+        return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
     }
 };
 

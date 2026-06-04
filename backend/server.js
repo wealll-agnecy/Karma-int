@@ -255,10 +255,50 @@ app.use((err, req, res, next) => {
 });
 
 // --- STARTUP SEQUENCE ---
+const autoSeedUsers = async () => {
+    try {
+        const User = require('./models/User');
+        
+        // Seed Admin
+        const adminEmail = 'admin@growthu.com';
+        const adminExists = await User.findOne({ email: adminEmail });
+        if (!adminExists) {
+            await User.create({
+                name: 'Administrator',
+                email: adminEmail,
+                password: 'GrowthUtsav2026',
+                role: 'admin',
+                status: 'verified'
+            });
+            console.log(`✅ Default Admin user created: ${adminEmail}`);
+        }
+
+        // Seed Organizer
+        const organizerEmail = 'karma2026@gmail.com';
+        const organizerExists = await User.findOne({ email: organizerEmail });
+        if (!organizerExists) {
+            await User.create({
+                name: 'Primary Organizer',
+                email: organizerEmail,
+                password: 'KarmaInt@2026',
+                role: 'organizer',
+                status: 'verified',
+                isApproved: true
+            });
+            console.log(`✅ Default Organizer user created: ${organizerEmail}`);
+        }
+    } catch (err) {
+        console.error('🚨 [AUTO SEED ERROR]: Failed to seed default users', err);
+    }
+};
+
 const startServer = async () => {
     try {
         console.log('💾 Connecting to Database...');
         await connectDB();
+        
+        console.log('🌱 Auto-seeding default users...');
+        await autoSeedUsers();
 
         console.log('⏰ Initializing Scheduler...');
         initScheduler();
