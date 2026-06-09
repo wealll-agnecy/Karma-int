@@ -11,7 +11,7 @@ const OrganizerNavbar = ({ onToggleSidebar, role }) => {
     const [notifications, setNotifications] = useState([
         { id: 1, title: 'New Ticket Sale', message: 'Kaustav bought VIP ticket for Masterclass.', isRead: false, createdAt: new Date().toISOString() },
         { id: 2, title: 'Lead Updated', message: 'Gopal Chandra Paul status changed to Contacted.', isRead: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
-        { id: 3, title: 'Event Approval', message: 'Your event "Karma Basic to Advanced" was approved.', isRead: true, createdAt: new Date(Date.now() - 86400000).toISOString() },
+        { id: 3, title: 'Event Approval', message: 'Your event "IRI Apex Basic to Advanced" was approved.', isRead: true, createdAt: new Date(Date.now() - 86400000).toISOString() },
         { id: 4, title: 'Payment Received', message: '₹5000 partial payment received from attendee.', isRead: true, createdAt: new Date(Date.now() - 172800000).toISOString() }
     ]);
     const [unreadCount, setUnreadCount] = useState(2);
@@ -56,10 +56,7 @@ const OrganizerNavbar = ({ onToggleSidebar, role }) => {
                     <FaBars size={22} color="#000" />
                 </button>
                 <div className="logo-container text-decoration-none">
-                    <h1 className="logo-text mb-0" style={{ fontSize: '1.25rem', letterSpacing: '0.5px' }}>
-                        <span className="growth" style={{ color: 'var(--primary)' }}>Growth</span>
-                        <span className="utsav" style={{ color: '#000' }}>Utsav</span>
-                    </h1>
+                    <img src="/iri-apex-logo.png" alt="IRI APEX" style={{ height: '40px', objectFit: 'contain' }} />
                 </div>
             </div>
             

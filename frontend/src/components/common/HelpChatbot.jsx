@@ -19,7 +19,7 @@ const FAQ_RESPONSES = [
     },
     {
         keywords: ['contact', 'support', 'help', 'reach out', 'email', 'whatsapp', 'phone', 'talk to someone'],
-        answer: `📞 **Contact Our Support Team**\n\nWe're here to help! Reach us through:\n\n• 📧 **Email:** support@growthutsav.com\n• 💬 **WhatsApp:** Click the **Contact** button in the navbar for quick access.\n\n🕙 Support hours: Mon–Sat, 9 AM – 7 PM IST.`,
+        answer: `📞 **Contact Our Support Team**\n\nWe're here to help! Reach us through:\n\n• 📧 **Email:** support@iriapex.com\n• 💬 **WhatsApp:** Click the **Contact** button in the navbar for quick access.\n\n🕙 Support hours: Mon–Sat, 9 AM – 7 PM IST.`,
     },
     {
         keywords: ['organizer', 'become organizer', 'organizer account', 'organizer request', 'host account'],

@@ -121,7 +121,7 @@ const DashboardLayout = ({ children, role }) => {
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="sidebar-logo-min"
                             >
-                                GU
+                                IA
                             </motion.div>
                         ) : (
                             <motion.div 
@@ -129,11 +129,7 @@ const DashboardLayout = ({ children, role }) => {
                                 animate={{ opacity: 1 }}
                                 className="sidebar-logo-expanded"
                             >
-                                <h1 className="logo-text mb-0">
-                                    <span className="growth">Growth</span>
-                                    <span className="utsav">Utsav</span>
-                                </h1>
-                                <p className="tagline mb-0">AN EVENT SERIES OF WE ALL</p>
+                                <img src="/iri-apex-logo.png" alt="IRI APEX" style={{ maxHeight: '50px', objectFit: 'contain' }} />
                             </motion.div>
                         )}
                     </Link>

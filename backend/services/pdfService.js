@@ -66,7 +66,7 @@ exports.generateTicketPDF = async (ticketId) => {
             doc.fillColor(primaryColor)
                .font('Helvetica-Bold')
                .fontSize(24)
-               .text('KARMA INTERNATIONAL BASIC TO ADVANCED MASTER CLASS', 50, 60, { width: 495, align: 'left', lineGap: 6 });
+               .text('IRI APEX BASIC TO ADVANCED MASTER CLASS', 50, 60, { width: 495, align: 'left', lineGap: 6 });
             
             // Event Logistics
             doc.fillColor(primaryColor).fontSize(13).font('Helvetica-Bold').text('EVENT LOGISTICS', 50, 150);
@@ -165,13 +165,28 @@ exports.generateTicketPDF = async (ticketId) => {
             const baseUrl = process.env.PUBLIC_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : 'https://growthutsav.com'); 
             
             const jwt = require('jsonwebtoken');
-            const tokenPayload = {
-                ticketId: ticket.uuid,
-                attendeeId: ticket.user ? ticket.user._id.toString() : 'N/A',
-                orderId: (ticket.booking && ticket.booking.payments && ticket.booking.payments[0]) ? ticket.booking.payments[0].orderId : (ticket.booking ? ticket.booking.orderId : 'N/A'),
-                paymentId: (ticket.booking && ticket.booking.payments && ticket.booking.payments[0]) ? ticket.booking.payments[0].paymentId : (ticket.booking ? ticket.booking.paymentId : 'N/A')
-            };
-            const secureToken = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'fallback_secret');
+            const User = require('../models/User');
+            let activeAddons = [];
+            if (ticket.event && ticket.event.organizer) {
+                const organizerUser = await User.findById(ticket.event.organizer).lean();
+                const organizerAddons = organizerUser ? (organizerUser.operationalAddons || []) : [];
+                
+                if (ticket.booking && ticket.booking.selectedAddons) {
+                    ticket.booking.selectedAddons.forEach(sa => {
+                        const match = organizerAddons.find(a => a.name.toLowerCase() === sa.itemName?.toLowerCase());
+                        if (match && match.addonCode) activeAddons.push(match.addonCode);
+                    });
+                }
+                if (ticket.booking && ticket.booking.selectedFood) {
+                    ticket.booking.selectedFood.forEach(sf => {
+                        const match = organizerAddons.find(a => a.name.toLowerCase() === sf.itemName?.toLowerCase());
+                        if (match && match.addonCode) activeAddons.push(match.addonCode);
+                    });
+                }
+                activeAddons = [...new Set(activeAddons)];
+            }
+
+            const secureToken = ticket.uuid + (activeAddons.length > 0 ? '?addons=' + activeAddons.join(',') : '');
             
             const verificationUrl = `${baseUrl}/ticket/${secureToken}`;
             
@@ -189,7 +204,7 @@ exports.generateTicketPDF = async (ticketId) => {
             
             // Bottom Branding
             doc.rect(0, 795, 595.28, 46.89).fill('#fafafa');
-            doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(10).text('KARMA INTERNATIONAL • SECURE EVENT SERVICES', 0, 815, { align: 'center', letterSpacing: 1 });
+            doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(10).text('IRI APEX • SECURE EVENT SERVICES', 0, 815, { align: 'center', letterSpacing: 1 });
 
             doc.end();
         } catch (err) {

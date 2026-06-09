@@ -74,7 +74,7 @@ const RemainingPaymentPage = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID || "dummy_key",
                 amount: orderRes.data.amount,
                 currency: orderRes.data.currency,
-                name: "Karma Internationals",
+                name: "IRI APEX",
                 description: "Installment Payment",
                 order_id: orderRes.data.orderId,
                 handler: async function (response) {

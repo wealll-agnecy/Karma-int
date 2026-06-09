@@ -34,7 +34,7 @@ exports.protect = async (req, res, next) => {
         // ALWAYS fetch real User from MongoDB using precise projection to keep auth super fast and secure
         req.user = await User.findById(decoded.id)
             .select(
-                '_id role status name email assignedEvents staffRole staffCheckRole customAddonItemNames createdBy'
+                '_id role status name email assignedEvents staffRole staffCheckRole customAddonItemNames createdBy assignedAccessCode'
             )
             .lean();
 
@@ -81,7 +81,7 @@ exports.optionalProtect = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = await User.findById(decoded.id)
             .select(
-                '_id role status name email assignedEvents staffRole staffCheckRole customAddonItemNames createdBy'
+                '_id role status name email assignedEvents staffRole staffCheckRole customAddonItemNames createdBy assignedAccessCode'
             )
             .lean();
 

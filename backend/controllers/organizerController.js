@@ -154,8 +154,21 @@ exports.createAddon = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Addon with this name already exists' });
         }
 
+        // Generate Addon Code
+        const words = name.trim().split(/\s+/);
+        let baseCode = words.length > 1 
+            ? words.map(w => w[0].toUpperCase()).join('') 
+            : name.replace(/[^A-Za-z]/g, '').substring(0, 2).toUpperCase();
+        
+        let addonCode = baseCode;
+        let suffix = 1;
+        while (organizer.operationalAddons?.find(a => a.addonCode === addonCode)) {
+            addonCode = baseCode + suffix;
+            suffix++;
+        }
+
         organizer.operationalAddons = organizer.operationalAddons || [];
-        organizer.operationalAddons.push({ type, name });
+        organizer.operationalAddons.push({ type, name, addonCode });
         await organizer.save();
 
         res.status(201).json({ success: true, data: organizer.operationalAddons });

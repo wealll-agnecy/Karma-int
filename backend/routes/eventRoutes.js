@@ -7,10 +7,11 @@ const {
 
 const router = express.Router();
 const { protect, optionalProtect } = require('../middleware/authMiddleware');
+const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 
 router
     .route('/')
-    .get(optionalProtect, getEvents);
+    .get(optionalProtect, cacheMiddleware(30), getEvents);
 
 router
     .route('/myevents')
@@ -18,6 +19,6 @@ router
 
 router
     .route('/:id')
-    .get(optionalProtect, getEvent);
+    .get(optionalProtect, cacheMiddleware(30), getEvent);
 
 module.exports = router;

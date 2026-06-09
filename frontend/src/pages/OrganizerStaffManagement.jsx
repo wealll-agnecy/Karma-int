@@ -26,7 +26,7 @@ const OrganizerStaffManagement = () => {
     const [showReassignModal, setShowReassignModal] = useState(false);
     const [staffToReassign, setStaffToReassign] = useState(null);
     const [newRole, setNewRole] = useState('');
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff' });
+    const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff', assignedAccessCode: 'ENTRY' });
 
     const fetchData = async () => {
         try {
@@ -44,7 +44,7 @@ const OrganizerStaffManagement = () => {
         try {
             await organizerApi.createStaff(formData);
             setShowCreateModal(false);
-            setFormData({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff' });
+            setFormData({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff', assignedAccessCode: 'ENTRY' });
             playSound('success');
             toast.success('Personnel record created successfully');
             fetchData();
@@ -65,7 +65,7 @@ const OrganizerStaffManagement = () => {
     const handleReassignSubmit = async (e) => {
         e.preventDefault();
         try {
-            await apiClient.put(`/api/v1/organizer/staff/${staffToReassign._id}/role`, { staffRole: newRole });
+            await apiClient.put(`/api/v1/organizer/staff/${staffToReassign._id}/role`, { staffRole: staffToReassign.staffRole, assignedAccessCode: newRole });
             toast.success('Staff role reassigned successfully');
             setShowReassignModal(false);
             fetchData();
@@ -73,9 +73,10 @@ const OrganizerStaffManagement = () => {
     };
 
     const filteredStaff = staffList.filter(s =>
-        s.name?.toLowerCase().includes(search.toLowerCase()) ||
-        s.email?.toLowerCase().includes(search.toLowerCase()) ||
-        s.staffRole?.toLowerCase().includes(search.toLowerCase())
+        (s.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.email || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.staffRole || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.assignedAccessCode || '').toLowerCase().includes(search.toLowerCase())
     );
 
     const staffModalFields = [
@@ -152,16 +153,13 @@ const OrganizerStaffManagement = () => {
                                             </td>
                                             <td style={{ padding: '16px 20px' }}>
                                                 <span style={P.roleBadge(staff.staffRole)}>
-                                                    {staff.staffCheckRole === 'CUSTOM_ADDON' && staff.customAddonItemNames?.length > 0
-                                                        ? staff.customAddonItemNames[0].toUpperCase()
-                                                        : staff.staffRole.toUpperCase()
-                                                    }
+                                                    {staff.assignedAccessCode ? staff.assignedAccessCode.toUpperCase() : staff.staffRole.toUpperCase()}
                                                 </span>
                                             </td>
                                             <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', whiteSpace: 'nowrap' }}>
                                                     <button
-                                                        onClick={() => { setStaffToReassign(staff); setNewRole(staff.staffRole); setShowReassignModal(true); }}
+                                                        onClick={() => { setStaffToReassign(staff); setNewRole(staff.assignedAccessCode || 'ENTRY'); setShowReassignModal(true); }}
                                                         title="Reassign Role"
                                                         style={{ background: 'transparent', border: '1.5px solid #ede8f4', borderRadius: '10px', color: '#8b5cf6', padding: '7px 10px', cursor: 'pointer', transition: 'all .2s' }}
                                                         onMouseEnter={e => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.borderColor = '#8b5cf6'; }}
@@ -211,12 +209,10 @@ const OrganizerStaffManagement = () => {
                             </Form.Group>
                         ))}
                         <Form.Group className="mb-4">
-                            <label style={P.label}>Operational Designation</label>
-                            <Form.Select value={formData.staffRole} onChange={e => setFormData({ ...formData, staffRole: e.target.value })} style={P.input} className="shadow-none">
-                                <option value="gate staff">Gate Staff (Scanning & Validation)</option>
-                                <option value="coordinator">Coordinator (Operations)</option>
-                                <option value="support">Support Personnel</option>
-                                {addons.map((addon, i) => <option key={i} value={addon.name}>{addon.name} ({addon.type})</option>)}
+                            <label style={P.label}>Access Designation</label>
+                            <Form.Select value={formData.assignedAccessCode} onChange={e => setFormData({ ...formData, assignedAccessCode: e.target.value })} style={P.input} className="shadow-none">
+                                <option value="ENTRY">ENTRY (Main Entry)</option>
+                                {addons.map((addon, i) => <option key={i} value={addon.addonCode}>{addon.name} ({addon.addonCode})</option>)}
                             </Form.Select>
                         </Form.Group>
                         <button type="submit" style={{ width: '100%', background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '12px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(139,92,246,.25)' }}>
@@ -243,13 +239,11 @@ const OrganizerStaffManagement = () => {
                     </div>
                     <Form onSubmit={handleReassignSubmit}>
                         <Form.Group className="mb-4">
-                            <label style={P.label}>New Operational Designation</label>
+                            <label style={P.label}>New Access Designation</label>
                             <Form.Select required value={newRole} onChange={e => setNewRole(e.target.value)} style={P.input} className="shadow-none">
-                                <option value="">Select a role...</option>
-                                <option value="gate staff">Gate Staff (Scanning & Validation)</option>
-                                <option value="coordinator">Coordinator (Operations)</option>
-                                <option value="support">Support Personnel</option>
-                                {addons.map((addon, i) => <option key={i} value={addon.name}>{addon.name} ({addon.type})</option>)}
+                                <option value="">Select an access code...</option>
+                                <option value="ENTRY">ENTRY (Main Entry)</option>
+                                {addons.map((addon, i) => <option key={i} value={addon.addonCode}>{addon.name} ({addon.addonCode})</option>)}
                             </Form.Select>
                         </Form.Group>
                         <button type="submit" style={{ width: '100%', background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '12px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(139,92,246,.25)' }}>

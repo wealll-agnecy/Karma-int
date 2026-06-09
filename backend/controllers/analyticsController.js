@@ -43,7 +43,8 @@ exports.getEventAttendees = async (req, res) => {
         const payments = await Payment.find({ bookingId: { $in: bookingIds }, status: 'SUCCESS' }).lean();
         const paymentMap = {};
         payments.forEach(p => {
-            paymentMap[p.bookingId.toString()] = p;
+            if (!paymentMap[p.bookingId.toString()]) paymentMap[p.bookingId.toString()] = [];
+            paymentMap[p.bookingId.toString()].push(p);
         });
 
         const enriched = bookings.map((booking) => {
@@ -53,7 +54,7 @@ exports.getEventAttendees = async (req, res) => {
                 checkedIn: ticket ? ticket.scannedStatus : false,
                 scannedAt: ticket ? ticket.scannedAt : null,
                 ticketId: ticket ? ticket._id : null,
-                verifiedPayment: paymentMap[booking._id.toString()] || null
+                verifiedPayments: paymentMap[booking._id.toString()] || []
             };
         });
 

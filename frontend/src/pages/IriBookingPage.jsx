@@ -6,9 +6,9 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { playSound } from "../utils/soundManager";
-import './KarmaBookingPage.css';
+import './IriBookingPage.css';
 
-export default function KarmaBookingPage() {
+export default function IriBookingPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const selectedPlanName = location.state?.plan || 'Delegate Pass';
@@ -38,6 +38,8 @@ export default function KarmaBookingPage() {
         'Delegate Pass': 4999,
         'VIP Pass': 9999,
         'Elite Pass': 19999,
+        'Early Bird': 999,
+        'Regular': 3000,
     };
     const planPrice = planPrices[selectedPlanName] || 4999;
     const totalPersons = 1 + members.length;
@@ -62,7 +64,7 @@ export default function KarmaBookingPage() {
                     // console.warn('Backend responded but did not return a valid events list array. Using fallback schema.');
                     setEventDetails({
                         _id: VALID_FALLBACK_ID,
-                        title: "Karma International Basic to Advanced Master Class 2026",
+                        title: "IRI APEX Basic to Advanced Master Class 2026",
                         venue: "ALTAIR BOUTIQUE HOTEL, SALT LAKE",
                         date: "2026-08-17T00:00:00.000Z",
                         ticketTypes: [{ name: "Delegate Pass" }],
@@ -73,7 +75,7 @@ export default function KarmaBookingPage() {
                 console.error('Failed to fetch event directly from backend endpoint:', err);
                 setEventDetails({
                     _id: VALID_FALLBACK_ID,
-                    title: "Karma International Basic to Advanced Master Class 2026",
+                    title: "IRI APEX Basic to Advanced Master Class 2026",
                     venue: "ALTAIR BOUTIQUE HOTEL, SALT LAKE",
                     date: "2026-08-17T00:00:00.000Z",
                     ticketTypes: [{ name: "Delegate Pass" }],
@@ -187,7 +189,7 @@ export default function KarmaBookingPage() {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID || "dummy_key",
                 amount: orderRes.data.amount,
                 currency: orderRes.data.currency,
-                name: "Karma Internationals",
+                name: "IRI APEX",
                 description: "Event Booking",
                 order_id: orderRes.data.orderId,
                 handler: async function (response) {
@@ -257,7 +259,7 @@ export default function KarmaBookingPage() {
 
     if (isLoadingEvent) {
         return (
-            <div className="karma-booking-page d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
+            <div className="iri-booking-page d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
                 <div className="text-center text-white">
                     <div className="spinner-border text-warning mb-3" role="status" />
                     <p>Loading classes and event details...</p>
@@ -267,7 +269,7 @@ export default function KarmaBookingPage() {
     }
 
     return (
-        <div className="karma-booking-page">
+        <div className="iri-booking-page">
             <AnimatePresence>
                 {showSuccess && (
                     <motion.div 
@@ -312,35 +314,35 @@ export default function KarmaBookingPage() {
             <div className="container">
 
                 {/* Back */}
-                <button className="kb-back-btn" onClick={() => navigate('/')}>
+                <button className="ib-back-btn" onClick={() => navigate('/')}>
                     ← Back to Landing Page
                 </button>
 
                 {/* Progress Steps */}
-                <div className="kb-steps">
-                    <div className="kb-step active">
-                        <div className="kb-step-circle">1</div>
-                        <div className="kb-step-label">Details</div>
+                <div className="ib-steps">
+                    <div className="ib-step active">
+                        <div className="ib-step-circle">1</div>
+                        <div className="ib-step-label">Details</div>
                     </div>
-                    <div className="kb-step-line" />
-                    <div className="kb-step">
-                        <div className="kb-step-circle">2</div>
-                        <div className="kb-step-label">Payment</div>
+                    <div className="ib-step-line" />
+                    <div className="ib-step">
+                        <div className="ib-step-circle">2</div>
+                        <div className="ib-step-label">Payment</div>
                     </div>
-                    <div className="kb-step-line" />
-                    <div className="kb-step">
-                        <div className="kb-step-circle">3</div>
-                        <div className="kb-step-label">Ticket</div>
+                    <div className="ib-step-line" />
+                    <div className="ib-step">
+                        <div className="ib-step-circle">3</div>
+                        <div className="ib-step-label">Ticket</div>
                     </div>
                 </div>
 
                 {/* Event Strip */}
-                <div className="kb-event-strip">
+                <div className="ib-event-strip">
                     <div>
-                        <div className="kb-event-name">
+                        <div className="ib-event-name">
                             {eventDetails?.title}
                         </div>
-                        <p className="kb-event-meta">
+                        <p className="ib-event-meta">
                             📍 {eventDetails?.venue} &nbsp;·&nbsp;
                             📅 {eventDetails?.date ? (
                                 (new Date(eventDetails.date).getUTCDate() === 17 && new Date(eventDetails.date).getUTCMonth() === 7 && new Date(eventDetails.date).getUTCFullYear() === 2026)
@@ -349,7 +351,7 @@ export default function KarmaBookingPage() {
                             ) : ''}
                         </p>
                     </div>
-                    <div className="kb-plan-chip">
+                    <div className="ib-plan-chip">
                         ✦ {selectedPlanName}
                     </div>
                 </div>
@@ -357,17 +359,17 @@ export default function KarmaBookingPage() {
                 <div className="row g-4">
                     {/* ── LEFT: Forms ── */}
                     <div className="col-lg-8">
-                        <div className="kb-card">
-                            <div className="kb-card-title">
-                                <div className="kb-card-title-icon">👤</div>
+                        <div className="ib-card">
+                            <div className="ib-card-title">
+                                <div className="ib-card-title-icon">👤</div>
                                 Primary Attendee Details
                             </div>
 
                             <div className="row g-3">
                                 <div className="col-md-6">
-                                    <label className="kb-label">Full Name *</label>
+                                    <label className="ib-label">Full Name *</label>
                                     <input
-                                        className="kb-input"
+                                        className="ib-input"
                                         type="text"
                                         placeholder="As per ID proof"
                                         value={fullName}
@@ -375,9 +377,9 @@ export default function KarmaBookingPage() {
                                     />
                                 </div>
                                 <div className="col-md-6">
-                                    <label className="kb-label">WhatsApp Number *</label>
+                                    <label className="ib-label">WhatsApp Number *</label>
                                     <input
-                                        className="kb-input"
+                                        className="ib-input"
                                         type="text"
                                         placeholder="10-digit mobile number"
                                         value={whatsappNumber}
@@ -385,9 +387,9 @@ export default function KarmaBookingPage() {
                                     />
                                 </div>
                                 <div className="col-md-6">
-                                    <label className="kb-label">Email Address *</label>
+                                    <label className="ib-label">Email Address *</label>
                                     <input
-                                        className="kb-input"
+                                        className="ib-input"
                                         type="email"
                                         placeholder="Your email for tickets"
                                         value={email}
@@ -395,9 +397,9 @@ export default function KarmaBookingPage() {
                                     />
                                 </div>
                                 <div className="col-md-6">
-                                    <label className="kb-label">Carrier / Business Name</label>
+                                    <label className="ib-label">Carrier / Business Name</label>
                                     <input
-                                        className="kb-input"
+                                        className="ib-input"
                                         type="text"
                                         placeholder="Your studio or brand name"
                                         value={carrier}
@@ -405,9 +407,9 @@ export default function KarmaBookingPage() {
                                     />
                                 </div>
                                 <div className="col-md-6">
-                                    <label className="kb-label">Pincode *</label>
+                                    <label className="ib-label">Pincode *</label>
                                     <input
-                                        className="kb-input"
+                                        className="ib-input"
                                         type="text"
                                         placeholder="Area pincode"
                                         value={pincode}
@@ -415,9 +417,9 @@ export default function KarmaBookingPage() {
                                     />
                                 </div>
                                 <div className="col-12">
-                                    <label className="kb-label">Full Address *</label>
+                                    <label className="ib-label">Full Address *</label>
                                     <textarea
-                                        className="kb-input"
+                                        className="ib-input"
                                         rows={3}
                                         placeholder="House/Flat no., Street, City, State"
                                         value={address}
@@ -429,9 +431,9 @@ export default function KarmaBookingPage() {
                         </div>
 
                         {/* Group Members Container */}
-                        <div className="kb-card">
-                            <div className="kb-card-title">
-                                <div className="kb-card-title-icon">👥</div>
+                        <div className="ib-card">
+                            <div className="ib-card-title">
+                                <div className="ib-card-title-icon">👥</div>
                                 Group Members
                                 {members.length > 0 && (
                                     <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#C9A227', fontWeight: 600 }}>
@@ -441,19 +443,19 @@ export default function KarmaBookingPage() {
                             </div>
 
                             {members.length === 0 && (
-                                <div className="kb-empty">
+                                <div className="ib-empty">
                                     No members added yet. Click below to add group members.
                                 </div>
                             )}
 
                             {members.map((member, index) => (
-                                <div className="kb-member-card" key={index}>
-                                    <div className="kb-member-header">
-                                        <div className="kb-member-label">
+                                <div className="ib-member-card" key={index}>
+                                    <div className="ib-member-header">
+                                        <div className="ib-member-label">
                                             👤 Member {index + 1}
                                         </div>
                                         <button
-                                            className="kb-member-remove"
+                                            className="ib-member-remove"
                                             onClick={() => handleRemoveMember(index)}
                                         >
                                             Remove
@@ -461,9 +463,9 @@ export default function KarmaBookingPage() {
                                     </div>
                                     <div className="row g-3">
                                         <div className="col-md-4">
-                                            <label className="kb-label">Member Name *</label>
+                                            <label className="ib-label">Member Name *</label>
                                             <input
-                                                className="kb-input"
+                                                className="ib-input"
                                                 type="text"
                                                 placeholder="Full name"
                                                 value={member.name}
@@ -471,9 +473,9 @@ export default function KarmaBookingPage() {
                                             />
                                         </div>
                                         <div className="col-md-4">
-                                            <label className="kb-label">WhatsApp Number *</label>
+                                            <label className="ib-label">WhatsApp Number *</label>
                                             <input
-                                                className="kb-input"
+                                                className="ib-input"
                                                 type="tel"
                                                 placeholder="10-digit number"
                                                 value={member.whatsappNumber}
@@ -481,9 +483,9 @@ export default function KarmaBookingPage() {
                                             />
                                         </div>
                                         <div className="col-md-4">
-                                            <label className="kb-label">Email Address *</label>
+                                            <label className="ib-label">Email Address *</label>
                                             <input
-                                                className="kb-input"
+                                                className="ib-input"
                                                 type="email"
                                                 placeholder="Email for ticket"
                                                 value={member.email || ''}
@@ -494,7 +496,7 @@ export default function KarmaBookingPage() {
                                 </div>
                             ))}
 
-                            <button className="kb-add-member-btn" onClick={handleAddMember}>
+                            <button className="ib-add-member-btn" onClick={handleAddMember}>
                                 + Add Another Member
                             </button>
                         </div>
@@ -502,18 +504,18 @@ export default function KarmaBookingPage() {
 
                     {/* ── RIGHT: Order Summary Layout ── */}
                     <div className="col-lg-4">
-                        <div className="kb-summary-card">
-                            <div className="kb-summary-title">Order Summary</div>
+                        <div className="ib-summary-card">
+                            <div className="ib-summary-title">Order Summary</div>
 
-                            <div className="kb-summary-row">
+                            <div className="ib-summary-row">
                                 <span>{selectedPlanName}</span>
                                 <span>₹{planPrice.toLocaleString('en-IN')}</span>
                             </div>
-                            <div className="kb-summary-row">
+                            <div className="ib-summary-row">
                                 <span>× {totalPersons} person{totalPersons > 1 ? 's' : ''}</span>
                                 <span>₹{subtotal.toLocaleString('en-IN')}</span>
                             </div>
-                            <div className="kb-summary-row total">
+                            <div className="ib-summary-row total">
                                 <span>Total</span>
                                 <span>₹{total.toLocaleString('en-IN')}</span>
                             </div>
@@ -561,7 +563,7 @@ export default function KarmaBookingPage() {
                                         <label style={{ fontSize: '0.8rem', color: '#ccc', marginBottom: '8px', display: 'block' }}>Enter Partial Amount (₹)</label>
                                         <input
                                             type="number"
-                                            className="kb-input"
+                                            className="ib-input"
                                             style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}
                                             placeholder={`Min. ₹1,000`}
                                             value={partialAmountValue}
@@ -572,7 +574,7 @@ export default function KarmaBookingPage() {
                             </div>
 
                             <button
-                                className="kb-pay-btn"
+                                className="ib-pay-btn"
                                 onClick={handlePayNow}
                                 disabled={processing}
                             >
@@ -586,7 +588,7 @@ export default function KarmaBookingPage() {
                                 )}
                             </button>
 
-                            <p className="kb-secure-note">
+                            <p className="ib-secure-note">
                                 🔒 100% Secure · Instant Ticket via Email
                             </p>
                         </div>

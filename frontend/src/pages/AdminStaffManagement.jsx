@@ -20,7 +20,7 @@ const AdminStaffManagement = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState(null);
     const [search, setSearch] = useState('');
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff' });
+    const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff', assignedAccessCode: 'ENTRY' });
 
     const fetchData = async () => {
         try {
@@ -36,7 +36,7 @@ const AdminStaffManagement = () => {
         try {
             await adminApi.createStaff(formData);
             setShowCreateModal(false);
-            setFormData({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff' });
+            setFormData({ name: '', email: '', phone: '', password: '', staffRole: 'gate staff', assignedAccessCode: 'ENTRY' });
             playSound('success');
             toast.success('Personnel record created');
             fetchData();
@@ -55,9 +55,10 @@ const AdminStaffManagement = () => {
     };
 
     const filteredStaff = staffList.filter(s =>
-        s.name?.toLowerCase().includes(search.toLowerCase()) ||
-        s.email?.toLowerCase().includes(search.toLowerCase()) ||
-        s.staffRole?.toLowerCase().includes(search.toLowerCase())
+        (s.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.email || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.staffRole || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.assignedAccessCode || '').toLowerCase().includes(search.toLowerCase())
     );
 
     const modalFields = [
@@ -130,7 +131,7 @@ const AdminStaffManagement = () => {
                                                 </div>
                                             </td>
                                             <td style={{ padding: '16px 20px' }}>
-                                                <span style={P.roleBadge(staff.staffRole)}>{staff.staffRole}</span>
+                                                <span style={P.roleBadge(staff.staffRole)}>{staff.assignedAccessCode ? staff.assignedAccessCode.toUpperCase() : staff.staffRole}</span>
                                             </td>
                                             <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                 <button onClick={() => handleDelete(staff._id)} title="Terminate"
@@ -173,11 +174,10 @@ const AdminStaffManagement = () => {
                             </Form.Group>
                         ))}
                         <Form.Group className="mb-4">
-                            <label style={P.label}>Operational Designation</label>
-                            <Form.Select value={formData.staffRole} onChange={e => setFormData({ ...formData, staffRole: e.target.value })} style={P.input} className="shadow-none">
-                                <option value="gate staff">Gate Staff</option>
-                                <option value="coordinator">Coordinator</option>
-                                <option value="support">Support</option>
+                            <label style={P.label}>Access Designation</label>
+                            <Form.Select value={formData.assignedAccessCode} onChange={e => setFormData({ ...formData, assignedAccessCode: e.target.value })} style={P.input} className="shadow-none">
+                                <option value="ENTRY">ENTRY (Main Entry)</option>
+                                {/* Addons would be fetched dynamically if admin needs to assign them, but usually Organizer does this. */}
                             </Form.Select>
                         </Form.Group>
                         <button type="submit" style={{ width: '100%', background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '12px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(139,92,246,.25)' }}>

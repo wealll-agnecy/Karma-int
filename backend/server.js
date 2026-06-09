@@ -47,6 +47,7 @@ const initScheduler = require('./utils/scheduler');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
+const hpp = require('hpp'); // Prevent HTTP Parameter Pollution
 
 const { initFirebase } = require('./utils/firebase');
 const http = require('http');
@@ -56,12 +57,22 @@ require('./queue/notificationQueue');
 
 const app = express();
 
-// --- CORS INITIALIZATION (Must be at the very top to set headers on 429 and 500 error responses) ---
+// --- ADVANCED SECURITY ---
+app.disable('x-powered-by'); // Hide Express identity from hackers
+app.use(hpp()); // Prevent HTTP Parameter Pollution
+
 const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim().toLowerCase()) : [];
 app.use(cors({
     origin: function (origin, callback) {
-        // ALWAYS ALLOW - Fix CORS permanently
-        callback(null, true);
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin is allowed or if it's localhost in development
+        if (allowedOrigins.includes(origin.toLowerCase()) || origin.startsWith('http://localhost:')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -237,22 +248,9 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
-app.use((req, res, next) => {
-    console.log(`❌ [404 ERROR]: ${req.method} ${req.originalUrl} - No route matched`);
-    res.status(404).json({
-        success: false,
-        message: `Route ${req.originalUrl} not found on this server`
-    });
-});
-
-app.use((err, req, res, next) => {
-    console.error("🚨 GLOBAL SERVER ERROR:", err.stack || err.message);
-    res.status(err.statusCode || err.status || 500).json({
-        success: false,
-        message: err.message || 'Internal Server Error',
-        stack: process.env.NODE_ENV === 'production' ? undefined : err.stack
-    });
-});
+const { errorHandler, notFound } = require('./middleware/errorMiddleware');
+app.use(notFound);
+app.use(errorHandler);
 
 // --- STARTUP SEQUENCE ---
 const autoSeedUsers = async () => {
@@ -274,13 +272,13 @@ const autoSeedUsers = async () => {
         }
 
         // Seed Organizer
-        const organizerEmail = 'karma2026@gmail.com';
+        const organizerEmail = 'iriapex2026@gmail.com';
         const organizerExists = await User.findOne({ email: organizerEmail });
         if (!organizerExists) {
             await User.create({
                 name: 'Primary Organizer',
                 email: organizerEmail,
-                password: 'KarmaInt@2026',
+                password: 'IriApex@2026',
                 role: 'organizer',
                 status: 'verified',
                 isApproved: true
@@ -315,7 +313,7 @@ const startServer = async () => {
     }
 };
 
-const PORT = process.env.PORT || 5003;
+const PORT = process.env.PORT || 5004;
 
 server.on('error', (e) => {
     if (e.code === 'EADDRINUSE') {

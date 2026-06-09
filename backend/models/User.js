@@ -115,7 +115,8 @@ const Organizer = User.discriminator('organizer', new mongoose.Schema({
     },
     operationalAddons: [{
         type: { type: String },
-        name: String
+        name: String,
+        addonCode: { type: String, unique: true, sparse: true }
     }]
 }));
 
@@ -133,6 +134,12 @@ const Staff = User.discriminator('staff', new mongoose.Schema({
         type: String,
         enum: ['ENTRY', 'FOOD', 'PARKING', 'CUSTOM_ADDON'],
         required: true,
+        default: 'ENTRY'
+    },
+
+    // New unified QR Access Control Code
+    assignedAccessCode: {
+        type: String,
         default: 'ENTRY'
     },
 

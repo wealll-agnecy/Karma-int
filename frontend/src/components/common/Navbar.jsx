@@ -122,11 +122,7 @@ const Navbar = () => {
             <Container fluid className="px-lg-5">
                 {/* Brand Logo */}
                 <BsNavbar.Brand as={Link} to="/" className="logo-container">
-                    <h1 className="logo-text mb-0">
-                        <span className="growth">Growth</span>
-                        <span className="utsav">Utsav</span>
-                    </h1>
-                    <p className="tagline mb-0">AN EVENT SERIES OF WE ALL</p>
+                    <img src="/iri-apex-logo.png" alt="IRI APEX" style={{ maxHeight: '60px', objectFit: 'contain' }} />
                 </BsNavbar.Brand>
 
                 {/* Mobile Icons (Visible only on mobile) */}

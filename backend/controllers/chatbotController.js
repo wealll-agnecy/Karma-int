@@ -23,7 +23,7 @@ Here is the context about the platform to base your answers on:
 10. **Notifications**: Real-time notifications appear in the top right bell icon dropdown, showing alerts like "Full Payment Received & Ticket Booked".
 11. **Leads**: Organizers can track their unconverted leads in the Leads tab.
 
-Answer concisely but thoroughly. If you don't know the answer to a very specific account question, advise them to contact support@karmainternational.com.`;
+Answer concisely but thoroughly. If you don't know the answer to a very specific account question, advise them to contact support@iriapex.com.`;
 
         // Format history for Pollinations AI
         const messages = [

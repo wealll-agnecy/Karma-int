@@ -25,6 +25,7 @@ router.post('/update-food', protect, authorize('staff', 'admin'), updateFoodAcce
 router.post('/update-parking', protect, authorize('staff', 'admin'), updateParkingAccess);
 router.post('/update-addons', protect, authorize('staff', 'admin'), updateAddonsAccess);
 router.get('/today', protect, authorize('staff', 'admin'), getTodayEvents);
+router.get('/my-scans', protect, authorize('staff'), require('../controllers/ticketController').getMyScans);
 router.post('/verify', protect, authorize('staff', 'admin'), verifyTicket);
 router.post('/verify-manual', protect, authorize('staff', 'admin'), verifyManualTicket);
 router.post('/create', protect, authorize('admin'), require('../controllers/ticketController').createTicket);

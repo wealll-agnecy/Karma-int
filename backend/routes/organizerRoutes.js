@@ -48,11 +48,12 @@ router.get('/bookings', authorize('organizer', 'staff'), async (req, res) => {
         const payments = await Payment.find({ bookingId: { $in: bookingIds }, status: 'SUCCESS' }).lean();
         const paymentMap = {};
         payments.forEach(p => {
-            paymentMap[p.bookingId.toString()] = p;
+            if (!paymentMap[p.bookingId.toString()]) paymentMap[p.bookingId.toString()] = [];
+            paymentMap[p.bookingId.toString()].push(p);
         });
 
         const mappedData = tickets.map(t => {
-            const verifiedPayment = t.booking?._id ? paymentMap[t.booking._id.toString()] : null;
+            const verifiedPayments = t.booking?._id ? paymentMap[t.booking._id.toString()] : [];
             const total = t.totalAmount || t.ticketPrice || 0;
             const paid = t.amountPaid || 0;
             const remaining = Math.max(0, total - paid);
@@ -60,7 +61,7 @@ router.get('/bookings', authorize('organizer', 'staff'), async (req, res) => {
 
             return {
                 ...t,
-                verifiedPayment,
+                verifiedPayments,
                 attendeeName: t.name || t.user?.name || "N/A",
                 email: t.email || t.user?.email || "N/A",
                 phone: t.mobileNumber || t.user?.phone || "N/A",

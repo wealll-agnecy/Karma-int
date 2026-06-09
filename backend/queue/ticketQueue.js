@@ -75,12 +75,54 @@ const processTicketAction = async (data) => {
     }
 };
 
+const processPartialPaymentAction = async (data) => {
+    const { ticketId } = data;
+    try {
+        console.log(`[TICKET QUEUE]: Processing partial payment for ticket ${ticketId}`);
+        const Ticket = require('../models/Ticket');
+        const { sendPartialPaymentConfirmation } = require('../services/emailService');
+        const qrcode = require('qrcode');
+        
+        const ticket = await Ticket.findById(ticketId).populate('event').populate('booking');
+        if (!ticket) {
+            console.error(`[TICKET QUEUE]: Ticket not found for ID ${ticketId}`);
+            return;
+        }
+
+        console.log(`[TICKET QUEUE]: Generating QR Pass for partial payment: ${ticket.name}`);
+        const qrDataUrl = await qrcode.toDataURL(ticket.uuid, { width: 300, margin: 1 });
+        
+        try {
+            await sendPartialPaymentConfirmation(
+                { name: ticket.name, email: ticket.email },
+                ticket.event,
+                qrDataUrl,
+                { 
+                    ticketType: ticket.ticketType, 
+                    quantity: ticket.quantity || 1, 
+                    totalAmount: ticket.totalAmount || ticket.ticketPrice, 
+                    paidAmount: ticket.amountPaid || 0,
+                    dueAmount: Math.max(0, (ticket.totalAmount || ticket.ticketPrice) - (ticket.amountPaid || 0)),
+                    bookingId: ticket.booking._id,
+                    ticketId: ticket._id 
+                }
+            );
+        } catch (emailErr) {
+            console.error(`[TICKET QUEUE]: Partial email dispatch failed for ticket ${ticketId}:`, emailErr.message);
+        }
+    } catch (err) {
+        console.error(`❌ [TICKET QUEUE ERROR]: Failed processing partial ticket ${ticketId}:`, err.message);
+        throw err;
+    }
+};
+
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 const REDIS_ENABLED = process.env.ENABLE_REDIS !== 'false' && !!process.env.REDIS_URL;
 
 let ticketQueue = { 
     add: async (name, data) => {
-        await processTicketAction(data);
+        if (name === 'sendPartialPaymentEmail') await processPartialPaymentAction(data);
+        else await processTicketAction(data);
     },
     offlineMode: true
 };
@@ -125,7 +167,11 @@ if (REDIS_ENABLED) {
 
         worker = new Worker('ticketQueue', async (job) => {
             console.log(`[TICKET QUEUE]: Processing job ${job.id} (${job.name})`);
-            await processTicketAction(job.data);
+            if (job.name === 'sendPartialPaymentEmail') {
+                await processPartialPaymentAction(job.data);
+            } else {
+                await processTicketAction(job.data);
+            }
         }, { 
             connection: redisClient,
             removeOnComplete: { count: 100 },
@@ -144,7 +190,8 @@ if (REDIS_ENABLED) {
                 throw new Error('Redis not ready');
             } catch (err) {
                 console.log(`[SIGNAL - TICKET QUEUE]: Redis unavailable, processing ${name} via relay`);
-                await processTicketAction(data);
+                if (name === 'sendPartialPaymentEmail') await processPartialPaymentAction(data);
+                else await processTicketAction(data);
             }
         };
 

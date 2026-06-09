@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Badge, Spinner, Modal, Table } from 'react-bootstrap';
+import { Container, Row, Col, Badge, Spinner, Modal, Table, Accordion } from 'react-bootstrap';
 import { FaEnvelope, FaPhone, FaTicketAlt, FaCalendarDay, FaWallet, FaArrowLeft, FaSearch, FaUsers, FaEye, FaFileExcel, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import { formatCurrency } from '../utils/formatUtils';
 import * as analyticsApi from '../api/analyticsApi';
@@ -148,7 +148,7 @@ const AdminEventAttendees = () => {
             totalAmount: booking.totalAmount || attendee.totalAmount || 0,
             amountPaid: booking.amountPaid || attendee.amountPaid || 0,
             remainingAmount: Math.max((booking.totalAmount || attendee.totalAmount || 0) - (booking.amountPaid || attendee.amountPaid || 0), 0),
-            verifiedPayment: booking.verifiedPayment || null
+            verifiedPayments: booking.verifiedPayments || (booking.verifiedPayment ? [booking.verifiedPayment] : [])
         });
         setShowModal(true);
     };
@@ -661,35 +661,44 @@ const AdminEventAttendees = () => {
                                             </Col>
                                         </Row>
 
-                                        {selectedBooking.verifiedPayment && (
+                                        {selectedBooking.verifiedPayments && selectedBooking.verifiedPayments.length > 0 && (
                                             <div className="border-top pt-3 mt-2 text-start">
                                                 <h6 className="text-muted fw-bold small mb-2"><FaCheckCircle className="text-success me-1" /> Verified Transaction Details</h6>
-                                                <Row className="g-2 small">
-                                                    <Col sm={6}>
-                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Status</div>
-                                                        <div className="fw-bold text-success">{selectedBooking.verifiedPayment.status}</div>
-                                                    </Col>
-                                                    <Col sm={6}>
-                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Date</div>
-                                                        <div className="fw-bold">{new Date(selectedBooking.verifiedPayment.paidAt || selectedBooking.verifiedPayment.createdAt).toLocaleString()}</div>
-                                                    </Col>
-                                                    <Col sm={6}>
-                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Amount</div>
-                                                        <div className="fw-bold">{formatCurrency((selectedBooking.verifiedPayment.amount || 0) / 100)} {selectedBooking.verifiedPayment.currency}</div>
-                                                    </Col>
-                                                    <Col sm={6}>
-                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Method</div>
-                                                        <div className="fw-bold">{selectedBooking.verifiedPayment.paymentMethod || 'N/A'}</div>
-                                                    </Col>
-                                                    <Col sm={6}>
-                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment ID</div>
-                                                        <div className="fw-bold text-break font-monospace" style={{ fontSize: '0.8rem' }}>{selectedBooking.verifiedPayment.paymentId || 'N/A'}</div>
-                                                    </Col>
-                                                    <Col sm={6}>
-                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Transaction ID</div>
-                                                        <div className="fw-bold text-break font-monospace" style={{ fontSize: '0.8rem' }}>{selectedBooking.verifiedPayment.transactionId || 'N/A'}</div>
-                                                    </Col>
-                                                </Row>
+                                                <Accordion defaultActiveKey="0" className="mt-3">
+                                                    {selectedBooking.verifiedPayments.map((payment, pIndex) => (
+                                                        <Accordion.Item eventKey={pIndex.toString()} key={pIndex}>
+                                                            <Accordion.Header>Payment {pIndex + 1} - {formatCurrency((payment.amount || 0) / 100)}</Accordion.Header>
+                                                            <Accordion.Body>
+                                                                <Row className="g-2 small">
+                                                                    <Col sm={6}>
+                                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Status</div>
+                                                                        <div className="fw-bold text-success">{payment.status}</div>
+                                                                    </Col>
+                                                                    <Col sm={6}>
+                                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Date</div>
+                                                                        <div className="fw-bold">{new Date(payment.paidAt || payment.createdAt).toLocaleString()}</div>
+                                                                    </Col>
+                                                                    <Col sm={6}>
+                                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Amount</div>
+                                                                        <div className="fw-bold">{formatCurrency((payment.amount || 0) / 100)} {payment.currency}</div>
+                                                                    </Col>
+                                                                    <Col sm={6}>
+                                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment Method</div>
+                                                                        <div className="fw-bold">{payment.paymentMethod || 'N/A'}</div>
+                                                                    </Col>
+                                                                    <Col sm={6}>
+                                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Payment ID</div>
+                                                                        <div className="fw-bold text-break font-monospace" style={{ fontSize: '0.8rem' }}>{payment.paymentId || 'N/A'}</div>
+                                                                    </Col>
+                                                                    <Col sm={6}>
+                                                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Transaction ID</div>
+                                                                        <div className="fw-bold text-break font-monospace" style={{ fontSize: '0.8rem' }}>{payment.transactionId || 'N/A'}</div>
+                                                                    </Col>
+                                                                </Row>
+                                                            </Accordion.Body>
+                                                        </Accordion.Item>
+                                                    ))}
+                                                </Accordion>
                                             </div>
                                         )}
                                     </div>

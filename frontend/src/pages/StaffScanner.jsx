@@ -22,8 +22,7 @@ const StaffScanner = () => {
     const [updating, setUpdating] = useState(false);
     const ticketUnsubscribeRef = useRef(null);
 
-    const role = user?.staffCheckRole || 'ENTRY';
-    const customAddons = user?.customAddonItemNames || [];
+    const role = user?.assignedAccessCode || 'ENTRY';
 
     useEffect(() => {
         return () => {
@@ -36,13 +35,34 @@ const StaffScanner = () => {
     const toggleAction = async (endpoint, payload, successMessage) => {
         if (!scanResult || !scanResult.ticket) return;
         setUpdating(true);
+
+        // Optimistic UI Update
+        const previousScanResult = { ...scanResult };
+        setScanResult(prev => {
+            if (!prev || !prev.ticket) return prev;
+            const updatedTicket = { ...prev.ticket };
+            if (endpoint.includes('update-entry')) {
+                updatedTicket.isScanned = true;
+            } else if (endpoint.includes('update-food')) {
+                updatedTicket.foodTaken = true;
+            } else if (endpoint.includes('update-parking')) {
+                updatedTicket.parkingUsed = true;
+            } else if (endpoint.includes('update-addons')) {
+                if (!updatedTicket.addonStatuses) updatedTicket.addonStatuses = {};
+                updatedTicket.addonStatuses = { ...updatedTicket.addonStatuses, [payload.itemName]: true };
+            }
+            return { ...prev, ticket: updatedTicket };
+        });
+
         try {
             const res = await apiClient.post(endpoint, payload);
             if (res.data.success) {
                 toast.success(successMessage);
-                // The Firebase listener will automatically update the UI state
+                // The Firebase listener will automatically confirm the update
             }
         } catch (err) {
+            // Revert optimistic update on failure
+            setScanResult(previousScanResult);
             toast.error(err.response?.data?.message || 'Update failed.');
         } finally {
             setUpdating(false);
@@ -176,90 +196,30 @@ const StaffScanner = () => {
             );
         }
 
-        if (role === 'FOOD') {
+        if (role !== 'ENTRY') {
+            const isClaimed = ticket.addonStatuses && ticket.addonStatuses[role];
             return (
                 <div className="d-flex justify-content-between align-items-center bg-light p-3 rounded-3 border mt-4">
                     <div className="d-flex align-items-center gap-3">
-                        <div className={`d-flex justify-content-center align-items-center rounded-circle ${ticket.foodTaken ? 'bg-secondary text-white' : 'bg-pink text-white'}`} style={{ width: '36px', height: '36px' }}>
-                            <span style={{ fontSize: '16px' }}>🍔</span>
+                        <div className={`d-flex justify-content-center align-items-center rounded-circle ${isClaimed ? 'bg-secondary text-white' : 'bg-warning text-dark'}`} style={{ width: '36px', height: '36px' }}>
+                            <span style={{ fontSize: '16px' }}>🎟️</span>
                         </div>
                         <div className="d-flex flex-column text-start">
-                            <span className="fw-bold small text-dark">Food</span>
-                            <span className={`x-small fw-bold ${ticket.foodTaken ? 'text-secondary' : 'text-success'}`}>
-                                {ticket.foodTaken ? 'Food is already taken' : 'Food Available'}
+                            <span className="fw-bold small text-dark">Section Access: {ticket.addonName || role}</span>
+                            <span className={`x-small fw-bold ${isClaimed ? 'text-secondary' : 'text-success'}`}>
+                                {isClaimed ? 'Already Scanned/Claimed' : 'Access Available'}
                             </span>
                         </div>
                     </div>
                     <div>
                         <Form.Check 
                             type="switch"
-                            id="food-access-toggle"
-                            checked={ticket.foodTaken}
-                            disabled={ticket.foodTaken || updating}
-                            onChange={handleFoodToggleUpdate}
+                            id={`addon-toggle-${role}`}
+                            checked={isClaimed || false}
+                            disabled={isClaimed || updating}
+                            onChange={() => handleAddonToggleUpdate(role)}
                         />
                     </div>
-                </div>
-            );
-        }
-
-        if (role === 'PARKING') {
-            return (
-                <div className="d-flex justify-content-between align-items-center bg-light p-3 rounded-3 border mt-4">
-                    <div className="d-flex align-items-center gap-3">
-                        <div className={`d-flex justify-content-center align-items-center rounded-circle ${ticket.parkingUsed ? 'bg-secondary text-white' : 'bg-info text-white'}`} style={{ width: '36px', height: '36px' }}>
-                            <span style={{ fontSize: '16px' }}>🚗</span>
-                        </div>
-                        <div className="d-flex flex-column text-start">
-                            <span className="fw-bold small text-dark">Parking</span>
-                            <span className={`x-small fw-bold ${ticket.parkingUsed ? 'text-secondary' : 'text-success'}`}>
-                                {ticket.parkingUsed ? 'Parking already used' : 'Parking Available'}
-                            </span>
-                        </div>
-                    </div>
-                    <div>
-                        <Form.Check 
-                            type="switch"
-                            id="parking-access-toggle"
-                            checked={ticket.parkingUsed}
-                            disabled={ticket.parkingUsed || updating}
-                            onChange={handleParkingToggleUpdate}
-                        />
-                    </div>
-                </div>
-            );
-        }
-
-        if (role === 'CUSTOM_ADDON') {
-            return (
-                <div className="mt-4 d-flex flex-column gap-3">
-                    {customAddons.map((item, idx) => {
-                        const isClaimed = ticket.addonStatuses && ticket.addonStatuses[item];
-                        return (
-                            <div key={idx} className="d-flex justify-content-between align-items-center bg-light p-3 rounded-3 border">
-                                <div className="d-flex align-items-center gap-3">
-                                    <div className={`d-flex justify-content-center align-items-center rounded-circle ${isClaimed ? 'bg-secondary text-white' : 'bg-warning text-dark'}`} style={{ width: '36px', height: '36px' }}>
-                                        <span style={{ fontSize: '16px' }}>🎁</span>
-                                    </div>
-                                    <div className="d-flex flex-column text-start">
-                                        <span className="fw-bold small text-dark">{item}</span>
-                                        <span className={`x-small fw-bold ${isClaimed ? 'text-secondary' : 'text-success'}`}>
-                                            {isClaimed ? 'Already claimed' : 'Available'}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <Form.Check 
-                                        type="switch"
-                                        id={`addon-toggle-${idx}`}
-                                        checked={isClaimed || false}
-                                        disabled={isClaimed || updating}
-                                        onChange={() => handleAddonToggleUpdate(item)}
-                                    />
-                                </div>
-                            </div>
-                        );
-                    })}
                 </div>
             );
         }
@@ -432,7 +392,7 @@ const ScannerView = ({ onScanSuccess, onScanError, scannerError, setScannerError
 
         let html5QrCode;
         try {
-            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode = new Html5Qrcode("reader", { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
             scannerRef.current = html5QrCode;
             hasInitializedRef.current = true;
         } catch (e) {
@@ -441,12 +401,20 @@ const ScannerView = ({ onScanSuccess, onScanError, scannerError, setScannerError
         }
 
         const startScanner = async () => {
+            const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
+                const minEdgePercentage = 0.8; 
+                const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                return { width: qrboxSize, height: qrboxSize };
+            };
+
             try {
                 await html5QrCode.start(
                     { facingMode: "environment" },
                     {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 },
+                        fps: 15,
+                        qrbox: qrboxFunction,
+                        disableFlip: true,
                         aspectRatio: 1.0
                     },
                     onScanSuccess,
@@ -457,7 +425,7 @@ const ScannerView = ({ onScanSuccess, onScanError, scannerError, setScannerError
                 try {
                     await html5QrCode.start(
                         { facingMode: "user" },
-                        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                        { fps: 15, qrbox: qrboxFunction, disableFlip: false, aspectRatio: 1.0 },
                         onScanSuccess,
                         onScanError
                     );

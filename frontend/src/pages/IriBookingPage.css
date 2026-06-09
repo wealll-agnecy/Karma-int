@@ -1,6 +1,6 @@
-/* ── Karma Booking Page – Custom CSS ── */
+/* ── IRI Booking Page – Custom CSS ── */
 
-.karma-booking-page {
+.iri-booking-page {
   background: #050505;
   color: #F5F5F5;
   min-height: 100vh;
@@ -9,7 +9,7 @@
 }
 
 /* ── Page Header ── */
-.kb-back-btn {
+.ib-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -25,12 +25,12 @@
   transition: color 0.2s;
 }
 
-.kb-back-btn:hover {
+.ib-back-btn:hover {
   color: #C9A227;
 }
 
 /* ── Card ── */
-.kb-card {
+.ib-card {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(201, 162, 39, 0.15);
   border-radius: 24px;
@@ -40,7 +40,7 @@
   overflow: hidden;
 }
 
-.kb-card::before {
+.ib-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -50,7 +50,7 @@
   background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.4), transparent);
 }
 
-.kb-card-title {
+.ib-card-title {
   font-size: 1.2rem;
   font-weight: 800;
   color: #F5F5F5;
@@ -60,7 +60,7 @@
   gap: 10px;
 }
 
-.kb-card-title-icon {
+.ib-card-title-icon {
   width: 34px;
   height: 34px;
   border-radius: 10px;
@@ -73,7 +73,7 @@
 }
 
 /* ── Event Summary Strip ── */
-.kb-event-strip {
+.ib-event-strip {
   background: rgba(201, 162, 39, 0.06);
   border: 1px solid rgba(201, 162, 39, 0.2);
   border-radius: 18px;
@@ -86,20 +86,20 @@
   gap: 16px;
 }
 
-.kb-event-name {
+.ib-event-name {
   font-size: 1.3rem;
   font-weight: 900;
   color: #F5F5F5;
   margin-bottom: 4px;
 }
 
-.kb-event-meta {
+.ib-event-meta {
   color: #d1d5db;
   font-size: 0.85rem;
   margin: 0;
 }
 
-.kb-plan-chip {
+.ib-plan-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -113,7 +113,7 @@
 }
 
 /* ── Form Inputs ── */
-.kb-label {
+.ib-label {
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -123,7 +123,7 @@
   display: block;
 }
 
-.kb-input {
+.ib-input {
   width: 100%;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 217, 217, 0.1);
@@ -136,23 +136,23 @@
   font-family: 'Inter', sans-serif;
 }
 
-.kb-input:focus {
+.ib-input:focus {
   border-color: rgba(201, 162, 39, 0.5);
   box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
   background: rgba(255, 255, 255, 0.06);
 }
 
-.kb-input::placeholder {
+.ib-input::placeholder {
   color: #4b5563;
 }
 
-.kb-input option {
+.ib-input option {
   background: #ffffff;
   color: #F5F5F5;
 }
 
 /* ── Member Cards ── */
-.kb-member-card {
+.ib-member-card {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(201, 162, 39, 0.1);
   border-radius: 16px;
@@ -161,14 +161,14 @@
   position: relative;
 }
 
-.kb-member-header {
+.ib-member-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
 }
 
-.kb-member-label {
+.ib-member-label {
   font-size: 0.9rem;
   font-weight: 700;
   color: #C9A227;
@@ -177,7 +177,7 @@
   gap: 8px;
 }
 
-.kb-member-remove {
+.ib-member-remove {
   background: none;
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 8px;
@@ -188,12 +188,12 @@
   transition: all 0.2s;
 }
 
-.kb-member-remove:hover {
+.ib-member-remove:hover {
   background: rgba(239, 68, 68, 0.1);
 }
 
 /* ── Add Member Button ── */
-.kb-add-member-btn {
+.ib-add-member-btn {
   width: 100%;
   background: none;
   border: 1px dashed rgba(201, 162, 39, 0.35);
@@ -210,13 +210,13 @@
   gap: 8px;
 }
 
-.kb-add-member-btn:hover {
+.ib-add-member-btn:hover {
   background: rgba(201, 162, 39, 0.06);
   border-color: rgba(201, 162, 39, 0.6);
 }
 
 /* ── Empty State ── */
-.kb-empty {
+.ib-empty {
   text-align: center;
   padding: 24px 0 8px;
   color: #d9df9e;
@@ -224,7 +224,7 @@
 }
 
 /* ── Pay Button ── */
-.kb-pay-btn {
+.ib-pay-btn {
   width: 100%;
   position: relative;
   overflow: hidden;
@@ -242,17 +242,17 @@
   margin-top: 8px;
 }
 
-.kb-pay-btn:hover:not(:disabled) {
+.ib-pay-btn:hover:not(:disabled) {
   transform: scale(1.02);
   box-shadow: 0 0 90px rgba(201, 162, 39, 0.5);
 }
 
-.kb-pay-btn:disabled {
+.ib-pay-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }
 
-.kb-pay-btn::after {
+.ib-pay-btn::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -261,11 +261,11 @@
   transition: opacity 0.3s;
 }
 
-.kb-pay-btn:hover:not(:disabled)::after {
+.ib-pay-btn:hover:not(:disabled)::after {
   opacity: 1;
 }
 
-.kb-secure-note {
+.ib-secure-note {
   text-align: center;
   color: #4b5563;
   font-size: 0.8rem;
@@ -274,7 +274,7 @@
 }
 
 /* ── Order Summary Sidebar ── */
-.kb-summary-card {
+.ib-summary-card {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(201, 162, 39, 0.15);
   border-radius: 20px;
@@ -283,7 +283,7 @@
   top: 24px;
 }
 
-.kb-summary-title {
+.ib-summary-title {
   font-size: 1rem;
   font-weight: 800;
   color: #F5F5F5;
@@ -292,7 +292,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.kb-summary-row {
+.ib-summary-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -301,7 +301,7 @@
   margin-bottom: 12px;
 }
 
-.kb-summary-row.total {
+.ib-summary-row.total {
   color: #F5F5F5;
   font-weight: 800;
   font-size: 1rem;
@@ -310,12 +310,12 @@
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.kb-summary-row.total span:last-child {
+.ib-summary-row.total span:last-child {
   color: #C9A227;
 }
 
 /* ── Progress Steps ── */
-.kb-steps {
+.ib-steps {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -323,7 +323,7 @@
   margin-bottom: 48px;
 }
 
-.kb-step {
+.ib-step {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -331,7 +331,7 @@
   position: relative;
 }
 
-.kb-step-circle {
+.ib-step-circle {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -346,19 +346,19 @@
   transition: all 0.3s;
 }
 
-.kb-step.active .kb-step-circle {
+.ib-step.active .ib-step-circle {
   border-color: #C9A227;
   background: rgba(201, 162, 39, 0.15);
   color: #C9A227;
 }
 
-.kb-step.done .kb-step-circle {
+.ib-step.done .ib-step-circle {
   border-color: #10b981;
   background: rgba(16, 185, 129, 0.15);
   color: #10b981;
 }
 
-.kb-step-label {
+.ib-step-label {
   font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -366,11 +366,11 @@
   color: #9ca3af;
 }
 
-.kb-step.active .kb-step-label {
+.ib-step.active .ib-step-label {
   color: #C9A227;
 }
 
-.kb-step-line {
+.ib-step-line {
   flex: 1;
   height: 1px;
   background: rgba(255, 255, 255, 0.08);
@@ -379,41 +379,41 @@
 }
 
 /* Specific overrides to combat the global light-mode dark text system */
-.karma-booking-page h1,
-.karma-booking-page h2,
-.karma-booking-page h3,
-.karma-booking-page h4,
-.karma-booking-page h5,
-.karma-booking-page h6,
-.karma-booking-page .h1,
-.karma-booking-page .h2,
-.karma-booking-page .h3,
-.karma-booking-page .h4,
-.karma-booking-page .h5,
-.karma-booking-page .h6,
-.karma-booking-page .kb-card-title,
-.karma-booking-page .kb-event-name,
-.karma-booking-page .kb-member-label,
-.karma-booking-page .kb-summary-title {
+.iri-booking-page h1,
+.iri-booking-page h2,
+.iri-booking-page h3,
+.iri-booking-page h4,
+.iri-booking-page h5,
+.iri-booking-page h6,
+.iri-booking-page .h1,
+.iri-booking-page .h2,
+.iri-booking-page .h3,
+.iri-booking-page .h4,
+.iri-booking-page .h5,
+.iri-booking-page .h6,
+.iri-booking-page .ib-card-title,
+.iri-booking-page .ib-event-name,
+.iri-booking-page .ib-member-label,
+.iri-booking-page .ib-summary-title {
   color: #ffffff !important;
 }
 
-.karma-booking-page .kb-label,
-.karma-booking-page .kb-event-meta,
-.karma-booking-page .kb-secure-note,
-.karma-booking-page .kb-summary-row {
+.iri-booking-page .ib-label,
+.iri-booking-page .ib-event-meta,
+.iri-booking-page .ib-secure-note,
+.iri-booking-page .ib-summary-row {
   color: #d1d5db !important;
 }
 
-.karma-booking-page .kb-plan-chip {
+.iri-booking-page .ib-plan-chip {
   color: #C9A227 !important;
 }
 
-.karma-booking-page .kb-input {
+.iri-booking-page .ib-input {
   color: #ffffff !important;
   background: rgba(255, 255, 255, 0.04) !important;
 }
 
-.karma-booking-page .kb-input::placeholder {
+.iri-booking-page .ib-input::placeholder {
   color: #6b7280 !important;
 }

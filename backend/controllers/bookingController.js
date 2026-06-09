@@ -271,7 +271,11 @@ exports.finalizeBookingInternally = async (bookingId, amountFromOrder, razorpay_
 
     const { ticketQueue } = require('../queue/ticketQueue');
     for (const t of tickets) {
-        await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
+        if (booking.paymentStatus === 'completed') {
+            await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
+        } else {
+            await ticketQueue.add('sendPartialPaymentEmail', { ticketId: t._id });
+        }
     }
 
     const { scheduleReminders } = require('../queue/notificationQueue');
@@ -482,10 +486,14 @@ exports.demoBooking = async (req, res) => {
         const Ticket = require('../models/Ticket');
         const tickets = await Ticket.find({ booking: booking._id });
 
-        // Queue all tickets for background PDF generation & dispatch
+        // Queue all tickets for background dispatch
         const { ticketQueue } = require('../queue/ticketQueue');
         for (const t of tickets) {
-            await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
+            if (booking.paymentStatus === 'completed') {
+                await ticketQueue.add('generateAndSendTicket', { ticketId: t._id });
+            } else {
+                await ticketQueue.add('sendPartialPaymentEmail', { ticketId: t._id });
+            }
         }
 
         // Queue Event Reminders

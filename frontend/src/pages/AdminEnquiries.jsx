@@ -47,9 +47,9 @@ export default function AdminEnquiries() {
     const handleShowDetails = (enquiry) => { setSelectedEnquiry(enquiry); setShowModal(true); };
 
     const filtered = enquiries.filter(e =>
-        e.name?.toLowerCase().includes(search.toLowerCase()) ||
-        e.email?.toLowerCase().includes(search.toLowerCase()) ||
-        e.message?.toLowerCase().includes(search.toLowerCase())
+        (e.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (e.email || '').toLowerCase().includes(search.toLowerCase()) ||
+        (e.message || '').toLowerCase().includes(search.toLowerCase())
     );
 
     return (

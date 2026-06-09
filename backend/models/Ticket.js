@@ -197,5 +197,11 @@ TicketSchema.index({ parkingUsed: 1 });
 TicketSchema.index({ addonsTaken: 1 });
 
 // uuid & ticketCode already unique
+// --- OPTIMIZATION INDEXES ---
+TicketSchema.index({ eventId: 1 });
+TicketSchema.index({ email: 1 });
+TicketSchema.index({ status: 1 });
+TicketSchema.index({ eventId: 1, isScanned: 1 }); // Useful for attendance reports
+TicketSchema.index({ eventId: 1, email: 1 });     // Lookup specific attendee in an event
 
 module.exports = mongoose.model('Ticket', TicketSchema);

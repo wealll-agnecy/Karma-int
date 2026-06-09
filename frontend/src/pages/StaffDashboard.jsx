@@ -10,8 +10,12 @@ const P = {
     card: { background: 'rgba(255,255,255,0.97)', border: '1px solid #ede8f4', borderRadius: '22px', boxShadow: '0 8px 32px rgba(100,60,180,0.07)', overflow: 'hidden' }
 };
 
+import { useAuth } from '../context/AuthContext';
+
 const StaffDashboard = () => {
-    const [attendees, setAttendees] = useState([]);
+    const { user } = useAuth();
+    const defaultRole = user?.assignedAccessCode || 'ENTRY';
+    const [roleName, setRoleName] = useState(defaultRole === 'ENTRY' ? 'Entry' : defaultRole);
     const [recentEntries, setRecentEntries] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -20,8 +24,10 @@ const StaffDashboard = () => {
             const saved = localStorage.getItem('recent_scans');
             if (saved) setRecentEntries(JSON.parse(saved));
 
-            const res = await apiClient.get('/api/v1/organizer/bookings');
-            setAttendees(res.data.data || []);
+            const res = await apiClient.get('/api/v1/tickets/my-scans');
+            setRecentEntries(res.data.data || []);
+            if (res.data.accessName) setRoleName(res.data.accessName);
+            // setAttendees is no longer needed since we show my-scans directly
         } catch (err) {
             console.error('Failed to fetch attendees', err);
         } finally {
@@ -39,7 +45,9 @@ const StaffDashboard = () => {
                 <div style={{ padding: '40px 0 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
                     <div>
                         <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: '8px' }}>Staff Portal</div>
-                        <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.5rem)', fontWeight: 800, letterSpacing: '-1px', color: '#1e1b2e', margin: 0 }}>Entry System</h1>
+                        <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.5rem)', fontWeight: 800, letterSpacing: '-1px', color: '#1e1b2e', margin: 0, textTransform: 'capitalize' }}>
+                            {roleName.toUpperCase() === 'ENTRY' ? 'Entry System' : `${roleName} Access System`}
+                        </h1>
                     </div>
                     <Link to="/staff/scanner" style={{ background: 'linear-gradient(135deg,#d946ef,#8b5cf6)', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '12px 24px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 6px 20px rgba(139,92,246,.25)' }}>
                         <FaQrcode /> Open Scanner
@@ -68,7 +76,7 @@ const StaffDashboard = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {recentEntries.length > 0 ? recentEntries.map((item, index) => {
+                                        {recentEntries.map((item, index) => {
                                             const total = item.total || 0; const paid = item.paid || 0; const due = Math.max(total - paid, 0);
                                             const isFullyPaid = paid >= total && total > 0; const isPartial = paid > 0 && paid < total;
                                             return (
@@ -94,35 +102,8 @@ const StaffDashboard = () => {
                                                     <td style={{ padding: '16px 24px', textAlign: 'right', fontSize: '0.8rem', color: '#6b7280' }}>{item.time}</td>
                                                 </tr>
                                             );
-                                        }) : attendees.filter(a => a.status === 'used' || a.isScanned).slice(0, 10).map((attendee) => {
-                                            const total = attendee.totalAmount || 0; const paid = attendee.amountPaid || 0; const due = Math.max(total - paid, 0);
-                                            const isFullyPaid = paid >= total && total > 0; const isPartial = paid > 0 && paid < total;
-                                            return (
-                                                <tr key={attendee._id} style={{ borderTop: '1px solid #ede8f4' }}>
-                                                    <td style={{ padding: '16px 24px' }}>
-                                                        <div style={{ fontWeight: 700, color: '#1e1b2e', fontSize: '0.9rem' }}>{attendee.name || attendee.user?.name || attendee.attendeeDetails?.[0]?.name}</div>
-                                                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{attendee.email || attendee.user?.email || attendee.attendeeDetails?.[0]?.email}</div>
-                                                    </td>
-                                                    <td style={{ padding: '16px 24px', fontSize: '0.8rem', color: '#4b5563' }}>{attendee.eventName || attendee.event?.title}</td>
-                                                    <td style={{ padding: '16px 24px' }}>
-                                                        <div style={{ fontWeight: 800, color: '#1e1b2e', fontSize: '0.9rem' }}>{formatCurrency(paid)} / {formatCurrency(total)}</div>
-                                                        <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 700 }}>Due: {isFullyPaid ? formatCurrency(0) : formatCurrency(due)}</div>
-                                                        <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, background: isFullyPaid ? '#d1fae5' : isPartial ? '#fef3c7' : '#fee2e2', color: isFullyPaid ? '#059669' : isPartial ? '#d97706' : '#dc2626' }}>
-                                                            {isFullyPaid ? 'FULLY PAID' : isPartial ? 'PARTIAL' : 'UNPAID'}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                                                        <span style={{ background: '#dbeafe', color: '#2563eb', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>SCANNED</span>
-                                                    </td>
-                                                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                                                        <span style={{ background: '#f1f5f9', color: '#475569', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>{attendee.selectedPlan || attendee.planName || 'N/A'}</span>
-                                                    </td>
-                                                    <td style={{ padding: '16px 24px', textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, color: '#4b5563' }}>Valid Ticket</td>
-                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontSize: '0.8rem', color: '#6b7280' }}>{attendee.scannedAt ? new Date(attendee.scannedAt).toLocaleTimeString() : 'N/A'}</td>
-                                                </tr>
-                                            );
                                         })}
-                                        {recentEntries.length === 0 && attendees.length === 0 && !loading && (
+                                        {recentEntries.length === 0 && !loading && (
                                             <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>No entries processed yet.</td></tr>
                                         )}
                                     </tbody>
@@ -130,7 +111,7 @@ const StaffDashboard = () => {
                             </div>
 
                             <div className="d-lg-none" style={{ padding: '16px' }}>
-                                {recentEntries.length > 0 ? recentEntries.map((item, index) => {
+                                {recentEntries.map((item, index) => {
                                     const total = item.total || 0; const paid = item.paid || 0;
                                     const isFullyPaid = paid >= total && total > 0; const isPartial = paid > 0 && paid < total;
                                     return (
@@ -148,26 +129,8 @@ const StaffDashboard = () => {
                                             </div>
                                         </div>
                                     );
-                                }) : attendees.filter(a => a.status === 'used' || a.isScanned).slice(0, 10).map((attendee) => {
-                                    const total = attendee.totalAmount || 0; const paid = attendee.amountPaid || 0;
-                                    const isFullyPaid = paid >= total && total > 0; const isPartial = paid > 0 && paid < total;
-                                    return (
-                                        <div key={attendee._id} style={{ background: '#fff', border: '1px solid #ede8f4', borderRadius: '16px', padding: '16px', marginBottom: '12px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                                <div><div style={{ fontWeight: 800, color: '#1e1b2e' }}>{attendee.name || attendee.user?.name || attendee.attendeeDetails?.[0]?.name}</div><div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{attendee.eventName || attendee.event?.title}</div></div>
-                                                <span style={{ background: '#dbeafe', color: '#2563eb', padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 700 }}>SCANNED</span>
-                                            </div>
-                                            <div style={{ fontSize: '0.8rem', color: '#4b5563', marginBottom: '12px' }}><div>Plan: {attendee.selectedPlan || attendee.planName || 'Standard'}</div><div>Result: Valid Ticket</div></div>
-                                            <div style={{ borderTop: '1px dashed #ede8f4', paddingTop: '12px', display: 'flex', justifyContent: 'space-between' }}>
-                                                <div><div style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: 700 }}>PAID / TOTAL</div><div style={{ fontWeight: 800, fontSize: '0.85rem' }}>{formatCurrency(paid)} / {formatCurrency(total)}</div></div>
-                                                <div style={{ textAlign: 'right' }}><div style={{ fontSize: '0.65rem', color: '#9ca3af', fontWeight: 700 }}>STATUS</div>
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isFullyPaid ? '#059669' : isPartial ? '#d97706' : '#dc2626' }}>{isFullyPaid ? 'FULLY PAID' : isPartial ? 'PARTIAL' : 'UNPAID'}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
                                 })}
-                                {recentEntries.length === 0 && attendees.length === 0 && !loading && (
+                                {recentEntries.length === 0 && !loading && (
                                     <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>No entries processed yet.</div>
                                 )}
                             </div>

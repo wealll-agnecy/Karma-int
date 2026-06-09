@@ -26,7 +26,7 @@ exports.getStaff = async (req, res, next) => {
 // @access  Private (Admin / Organizer)
 exports.createStaff = async (req, res, next) => {
     try {
-        const { name, email, password, staffRole, phone, staffCheckRole, customAddonItemNames } = req.body;
+        const { name, email, password, phone, assignedAccessCode } = req.body;
 
 
         const existingUser = await User.findOne({ email });
@@ -41,25 +41,8 @@ exports.createStaff = async (req, res, next) => {
             }
         }
 
-        // Staff ID auto-generation
-        let prefix = 'STF';
-        if (staffRole !== 'gate staff' && staffRole !== 'coordinator' && staffRole !== 'support') {
-            prefix = staffRole.substring(0, 4).toUpperCase();
-        }
-        const randomId = Math.floor(1000 + Math.random() * 9000);
-        const staffId = `${prefix}-${randomId}`;
-
-        // Determine actual staffCheckRole
-        let finalStaffCheckRole = 'ENTRY';
-        let customAddonItems = [];
-        
-        if (['gate staff', 'coordinator', 'support'].includes(staffRole)) {
-            finalStaffCheckRole = 'ENTRY';
-        } else {
-            // It's a custom addon selected
-            finalStaffCheckRole = 'CUSTOM_ADDON';
-            customAddonItems = [staffRole];
-        }
+        // Default if frontend misses it
+        const finalAccessCode = assignedAccessCode || 'ENTRY';
 
         const staff = await User.create({
             name,
@@ -69,9 +52,8 @@ exports.createStaff = async (req, res, next) => {
             role: 'staff',
             staffRole: 'gate staff', // Default to gate staff for internal base role
 
-            staffCheckRole: finalStaffCheckRole,
-            customAddonItemNames: customAddonItems,
-            staffId: staffId,
+            assignedAccessCode: finalAccessCode,
+            staffId: `STF-${Math.floor(1000 + Math.random() * 9000)}`,
 
             createdBy: req.user._id
         });
@@ -112,7 +94,7 @@ exports.deleteStaff = async (req, res, next) => {
 // @access  Private (Organizer)
 exports.reassignStaffRole = async (req, res, next) => {
     try {
-        const { staffRole } = req.body;
+        const { assignedAccessCode } = req.body;
         const staff = await User.findById(req.params.id);
         
         if (!staff || staff.role !== 'staff') {
@@ -123,28 +105,9 @@ exports.reassignStaffRole = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Not authorized to modify this staff member' });
         }
 
-        // Generate new staffId prefix
-        let prefix = 'STF';
-        if (staffRole !== 'gate staff' && staffRole !== 'coordinator' && staffRole !== 'support') {
-            prefix = staffRole.substring(0, 4).toUpperCase();
-        }
-        const randomId = Math.floor(1000 + Math.random() * 9000);
-        const staffId = `${prefix}-${randomId}`;
-
-        let finalStaffCheckRole = 'ENTRY';
-        let customAddonItems = [];
-        
-        if (['gate staff', 'coordinator', 'support'].includes(staffRole)) {
-            finalStaffCheckRole = 'ENTRY';
-        } else {
-            finalStaffCheckRole = 'CUSTOM_ADDON';
-            customAddonItems = [staffRole];
-        }
-
-        staff.staffRole = 'gate staff'; // keeping internal role same
-        staff.staffCheckRole = finalStaffCheckRole;
-        staff.customAddonItemNames = customAddonItems;
-        staff.staffId = staffId;
+        const finalAccessCode = assignedAccessCode || 'ENTRY';
+        staff.assignedAccessCode = finalAccessCode;
+        staff.staffId = `STF-${Math.floor(1000 + Math.random() * 9000)}`;
         
         await staff.save();
 

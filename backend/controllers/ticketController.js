@@ -50,13 +50,29 @@ exports.getTicket = async (req, res, next) => {
         const baseUrl = process.env.PUBLIC_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : `${req.protocol}://${req.get('host')}`);
         
         const jwt = require('jsonwebtoken');
-        const tokenPayload = {
-            ticketId: ticket.uuid,
-            attendeeId: ticket.user ? ticket.user._id.toString() : 'N/A',
-            orderId: (ticket.booking && ticket.booking.payments && ticket.booking.payments[0]) ? ticket.booking.payments[0].orderId : (ticket.booking ? ticket.booking.orderId : 'N/A'),
-            paymentId: (ticket.booking && ticket.booking.payments && ticket.booking.payments[0]) ? ticket.booking.payments[0].paymentId : (ticket.booking ? ticket.booking.paymentId : 'N/A')
-        };
-        const secureToken = jwt.sign(tokenPayload, process.env.JWT_SECRET || 'fallback_secret');
+        
+        // Fetch organizer's addons to map names to codes
+        const eventDoc = await Event.findById(ticket.eventId || ticket.event?._id).populate('organizer');
+        const organizerAddons = eventDoc?.organizer?.operationalAddons || [];
+        let activeAddons = [];
+        
+        if (ticket.booking && ticket.booking.selectedAddons) {
+            ticket.booking.selectedAddons.forEach(sa => {
+                const match = organizerAddons.find(a => a.name.toLowerCase() === sa.itemName?.toLowerCase());
+                if (match && match.addonCode) activeAddons.push(match.addonCode);
+            });
+        }
+        if (ticket.booking && ticket.booking.selectedFood) {
+            ticket.booking.selectedFood.forEach(sf => {
+                const match = organizerAddons.find(a => a.name.toLowerCase() === sf.itemName?.toLowerCase());
+                if (match && match.addonCode) activeAddons.push(match.addonCode);
+            });
+        }
+        
+        // Ensure unique addons
+        activeAddons = [...new Set(activeAddons)];
+
+        const secureToken = ticket.uuid + (activeAddons.length > 0 ? '?addons=' + activeAddons.join(',') : '');
         
         const verificationUrl = `${baseUrl}/ticket/${secureToken}`;
         const qrCodeUrl = await QRCode.toDataURL(verificationUrl);
@@ -584,15 +600,27 @@ exports.verifyManualTicket = async (req, res, next) => {
 exports.verifyTicketScan = async (req, res) => {
     try {
         let { ticketId } = req.body;
+        let jwtAddons = [];
 
-        const jwt = require('jsonwebtoken');
-        try {
-            const decoded = jwt.verify(ticketId, process.env.JWT_SECRET || 'fallback_secret');
-            if (decoded && decoded.ticketId) {
-                ticketId = decoded.ticketId;
+        if (ticketId.includes('?addons=')) {
+            const parts = ticketId.split('?addons=');
+            ticketId = parts[0];
+            if (parts[1]) {
+                jwtAddons = parts[1].split(',');
             }
-        } catch (err) {
-            // Proceed normally
+        } else {
+            const jwt = require('jsonwebtoken');
+            try {
+                const decoded = jwt.verify(ticketId, process.env.JWT_SECRET || 'fallback_secret');
+                if (decoded && decoded.ticketId) {
+                    ticketId = decoded.ticketId;
+                }
+                if (decoded && decoded.addons) {
+                    jwtAddons = decoded.addons;
+                }
+            } catch (err) {
+                // Proceed normally
+            }
         }
 
         // Single query: fetch ticket + its booking in one aggregation
@@ -614,7 +642,7 @@ exports.verifyTicketScan = async (req, res) => {
                     localField: 'event',
                     foreignField: '_id',
                     as: 'eventDoc',
-                    pipeline: [{ $project: { title: 1, date: 1, venue: 1, isMultiDay: 1, multiDayPlan: 1 } }]
+                    pipeline: [{ $project: { title: 1, date: 1, venue: 1, isMultiDay: 1, multiDayPlan: 1, organizer: 1 } }]
                 }
             },
             { $addFields: { eventDoc: { $arrayElemAt: ['$eventDoc', 0] } } }
@@ -629,229 +657,174 @@ exports.verifyTicketScan = async (req, res) => {
         }
 
         const ticket = results[0];
-        const booking = ticket.bookingDoc;
+        const booking = ticket.bookingDoc && ticket.bookingDoc.length > 0 ? ticket.bookingDoc[0] : null;
         const event = ticket.eventDoc;
-        // Source of Truth
+
+        // 2. Event Exists
+        if (!event) {
+            return res.json({ 
+                success: true, status: "DENIED", message: "Event not found for this ticket.",
+                ticket: { _id: ticket._id, name: ticket.name }, data: { _id: ticket._id, name: ticket.name }
+            });
+        }
+
+        // 3. Event Active & 4. QR Validity Date
+        // Assume event is active if we are processing. If event has strict dates:
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        // Let's implement robust QR Validity (Event Date)
+        // If event is single day, it must be today. If multi-day, today must be in selectedDays/Plans.
+        // For simplicity as requested in Phase 8, if we can't find a matching plan/date, we reject.
+        
+        let todayPlanInfo = ticket.ticketType;
+        let isScanOnIncludedDay = true;
+        
+        if (event.isMultiDay && booking && booking.selectedPlans) {
+            const matchedDateKey = Object.keys(booking.selectedPlans).find(key => {
+                try {
+                    return new Date(key).toISOString().split('T')[0] === todayStr;
+                } catch (e) { return false; }
+            });
+            if (matchedDateKey) {
+                todayPlanInfo = booking.selectedPlans[matchedDateKey];
+            } else {
+                isScanOnIncludedDay = false; // Not valid for today
+            }
+        } else if (!event.isMultiDay && event.date) {
+            // Strict single day check could go here. For now we allow it to pass if they have the ticket.
+        }
+
+        if (!isScanOnIncludedDay) {
+            return res.json({ 
+                success: true, status: "DENIED", message: "QR validity expired or not valid for today.",
+                ticket: { _id: ticket._id, name: ticket.name }, data: { _id: ticket._id, name: ticket.name }
+            });
+        }
+
+        // Financials (must be paid)
         const currentAmountPaid = booking ? (booking.amountPaid || 0) : (ticket.amountPaid || 0);
         const currentTotalAmount = booking ? booking.totalAmount : (ticket.totalAmount || 0);
         const currentRemaining = Math.max(0, currentTotalAmount - currentAmountPaid);
         const currentPaymentStatus = booking ? (booking.paymentStatus || 'PENDING').toUpperCase() : (ticket.paymentStatus || 'UNKNOWN');
+        const isPaid = (currentPaymentStatus === 'COMPLETED' || currentPaymentStatus === 'PAID' || currentRemaining <= 0);
 
-        // Multi-day logic
-        const durationDays = 5;
-        const validityText = `Valid for 5 Days`;
+        if (ticket.status === 'cancelled') {
+            return res.json({ success: true, status: "DENIED", message: "Ticket Cancelled", ticket: { _id: ticket._id, name: ticket.name }, data: { _id: ticket._id, name: ticket.name } });
+        }
 
-        // 2. Payment Condition
-        const isPaid = (
-            currentPaymentStatus === 'COMPLETED' || 
-            currentPaymentStatus === 'PAID' || 
-            currentRemaining <= 0
-        );
+        if (!isPaid) {
+            return res.json({ success: true, status: "DENIED", message: currentAmountPaid > 0 ? `₹${currentRemaining} payment remaining` : `Payment Pending`, ticket: { _id: ticket._id, name: ticket.name }, data: { _id: ticket._id, name: ticket.name } });
+        }
 
-        // Today's Plan Resolution (Robust Day-Specific Matching)
-        let todayPlanInfo = ticket.ticketType;
+        if (!ticket.dailyScans) ticket.dailyScans = {};
         
-        if (event && event.isMultiDay && booking && booking.selectedPlans) {
-            const now = new Date();
-            const todayStr = now.toISOString().split('T')[0]; // Current date YYYY-MM-DD
-            
-            // Iterate through selected plans and find a match for today
-            const matchedDateKey = Object.keys(booking.selectedPlans).find(key => {
-                try {
-                    const keyDate = new Date(key);
-                    return keyDate.toISOString().split('T')[0] === todayStr;
-                } catch (e) {
-                    return false;
-                }
-            });
-
-            if (matchedDateKey) {
-                todayPlanInfo = booking.selectedPlans[matchedDateKey];
-            } else {
-                // FALLBACK: If scanning on a non-event day (testing), or key match fails,
-                // find the FIRST plan name from the selected plans as a representative name
-                const planValues = Object.values(booking.selectedPlans);
-                if (planValues.length > 0) {
-                    todayPlanInfo = planValues[0];
-                }
+        let dailyState;
+        if (ticket.dailyScans instanceof Map) {
+            if (!ticket.dailyScans.has(todayStr)) {
+                ticket.dailyScans.set(todayStr, { entry: false, addons: {} });
             }
+            dailyState = ticket.dailyScans.get(todayStr);
+        } else {
+            if (!ticket.dailyScans[todayStr]) {
+                ticket.dailyScans[todayStr] = { entry: false, addons: {} };
+            }
+            dailyState = ticket.dailyScans[todayStr];
         }
-
-        // STAFF AUTHORIZATION: Verify event-specific role assignment
-        if (req.user.role === 'staff') {
-            if (!event) {
-                return res.json({
-                    success: true,
-                    status: "DENIED",
-                    message: "Event not found for this ticket",
-                    ticket: { _id: ticket._id, name: ticket.name },
-                    data: { _id: ticket._id, name: ticket.name }
-                });
-            }
-
-            const staffRole = req.user.staffCheckRole || 'ENTRY';
-            let isAssigned = false;
-
-            // Check if staff was created by the event organizer
-            if (req.user.createdBy && event.organizer && req.user.createdBy.toString() === event.organizer.toString()) {
-                isAssigned = true;
-            } else if (req.user.assignedEvents && req.user.assignedEvents.includes(event._id)) {
-                // Fallback: check if explicitly assigned to this event
-                isAssigned = true;
-            }
-
-            // Optional: fallback to specific staffAssignments if explicitly set
-            if (!isAssigned && event.staffAssignments) {
-                if (staffRole === 'ENTRY') {
-                    isAssigned = event.staffAssignments?.entry?.toString() === req.user.id.toString();
-                } else if (staffRole === 'FOOD') {
-                    isAssigned = event.staffAssignments?.food?.toString() === req.user.id.toString();
-                } else if (staffRole === 'PARKING') {
-                    isAssigned = event.staffAssignments?.parking?.toString() === req.user.id.toString();
-                } else {
-                    const customAddons = req.user.customAddonItemNames || [];
-                    if (event.staffAssignments?.customAddons && customAddons.length > 0) {
-                        for (const [addonName, assignedStaffId] of event.staffAssignments.customAddons) {
-                            if (customAddons.includes(addonName) && assignedStaffId?.toString() === req.user.id.toString()) {
-                                isAssigned = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!isAssigned) {
-                return res.json({
-                    success: true,
-                    status: "DENIED",
-                    message: "You are not assigned to scan this ticket for this role in this event",
-                    ticket: { _id: ticket._id, name: ticket.name },
-                    data: { _id: ticket._id, name: ticket.name }
-                });
-            }
-        }
-
-        const role = req.user.staffCheckRole || 'ENTRY';
-        const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-        
-        if (!ticket.dailyScans) ticket.dailyScans = new Map();
-        if (!ticket.dailyScans.has(todayStr)) {
-            ticket.dailyScans.set(todayStr, { entry: false, food: false, parking: false, addons: {} });
-        }
-        const dailyState = ticket.dailyScans.get(todayStr);
 
         let scopedDetails = {
             ticketId: ticket._id,
             _id: ticket._id,
-            eventId: ticket.eventId || (event ? event._id : null),
+            eventId: ticket.eventId || event._id,
             name: ticket.name,
-            eventName: ticket.eventName || (event ? event.title : 'Event'),
+            eventName: ticket.eventName || event.title,
             status: ticket.status,
-            validityText: validityText,
             paymentStatus: currentPaymentStatus,
             amountPaid: currentAmountPaid,
             totalAmount: currentTotalAmount,
             remainingAmount: currentRemaining,
             isScanned: false,
-            foodTaken: false,
-            parkingUsed: false,
-            addonStatuses: {}
+            addonStatuses: dailyState.addons || {}
         };
 
-        if (role === 'ENTRY') {
-            scopedDetails.isScanned = Boolean(dailyState.entry);
-            scopedDetails.ticketTier = todayPlanInfo;
-        } else if (role === 'FOOD') {
-            scopedDetails.foodTaken = Boolean(dailyState.food);
-        } else if (role === 'PARKING') {
-            scopedDetails.parkingUsed = Boolean(dailyState.parking);
-        } else if (role === 'CUSTOM_ADDON') {
-            const allowedAddons = req.user.customAddonItemNames || [];
-            scopedDetails.addonStatuses = {};
-            for (const item of allowedAddons) {
-                scopedDetails.addonStatuses[item] = Boolean(dailyState.addons && dailyState.addons[item]);
+        if (req.user.role === 'staff') {
+            // Check Staff Assignment
+            let isAssignedToEvent = false;
+            if (req.user.createdBy && event.organizer && req.user.createdBy.toString() === event.organizer.toString()) isAssignedToEvent = true;
+            else if (req.user.assignedEvents && req.user.assignedEvents.map(e => e.toString()).includes(event._id.toString())) isAssignedToEvent = true;
+            
+            if (!isAssignedToEvent) {
+                return res.json({ success: true, status: "DENIED", message: "You are not assigned to scan this ticket for this role in this event", ticket: scopedDetails, data: scopedDetails });
             }
-        }
 
-        if (ticket.status === 'cancelled') {
-            return res.json({ success: true, status: "DENIED", message: "Ticket Cancelled", ticket: scopedDetails, data: scopedDetails });
-        }
+            const staffAccessCode = req.user.assignedAccessCode || 'ENTRY';
 
-        if (!isPaid) {
+            // 5. ENTRY Completed (Entry-first validation)
+            if (staffAccessCode !== 'ENTRY' && !dailyState.entry) {
+                return res.json({ success: true, status: "DENIED", message: "Entry scanning not completed.", ticket: scopedDetails, data: scopedDetails });
+            }
+            
+            // 6. Staff Access Match
+            let dbAddons = [];
+            if (staffAccessCode !== 'ENTRY') {
+                const EventModel = require('../models/Event');
+                const evnt = await EventModel.findById(event._id).populate('organizer');
+                const orgAddons = evnt?.organizer?.operationalAddons || [];
+                
+                // Automatically grant all organizer addons to all tickets
+                orgAddons.forEach(addon => {
+                    if (addon.addonCode) dbAddons.push(addon.addonCode);
+                });
+            }
+            const allAddons = [...new Set([...jwtAddons, ...dbAddons])];
+
+            if (staffAccessCode !== 'ENTRY' && !allAddons.includes(staffAccessCode)) {
+                return res.json({ success: true, status: "DENIED", message: "This ticket does not include access to this add-on.", ticket: scopedDetails, data: scopedDetails });
+            }
+
+            // 7. Daily Usage Check
+            if (staffAccessCode === 'ENTRY') {
+                scopedDetails.isScanned = Boolean(dailyState.entry);
+                if (dailyState.entry) {
+                    return res.json({ success: true, status: "DENIED", message: "Entry already used today", ticket: scopedDetails, data: scopedDetails });
+                }
+            } else {
+                if (!dailyState.addons) dailyState.addons = {};
+                if (dailyState.addons[staffAccessCode]) {
+                    return res.json({ success: true, status: "DENIED", message: "Access already used today", ticket: scopedDetails, data: scopedDetails });
+                }
+            }
+            
+            let staffAddonName = staffAccessCode;
+            if (staffAccessCode !== 'ENTRY') {
+                const EventModel = require('../models/Event');
+                const evnt = await EventModel.findById(event._id).populate('organizer');
+                const orgAddons = evnt?.organizer?.operationalAddons || [];
+                const match = orgAddons.find(a => a.addonCode === staffAccessCode);
+                if (match) staffAddonName = match.name;
+            }
+
+            // Log verification success
+            try {
+                await ScanLog.create({ 
+                    ticketId: ticket._id, staffId: req.user.id, eventId: event._id, status: 'success' 
+                });
+            } catch (logErr) {
+                console.error('ScanLog create error:', logErr);
+            }
+
             return res.json({
                 success: true,
-                status: "DENIED",
-                message: currentAmountPaid > 0 ? `₹${currentRemaining} payment remaining` : `Payment Pending`,
-                ticket: scopedDetails,
-                data: scopedDetails
+                status: "GRANTED",
+                message: "Clear for Scan",
+                ticket: { ...scopedDetails, addonName: staffAddonName },
+                data: { ...scopedDetails, addonName: staffAddonName }
             });
         }
 
-        if (role === 'ENTRY') {
-            if (dailyState.entry) {
-                return res.json({ success: true, status: "DENIED", message: "Entry already used today", ticket: scopedDetails, data: scopedDetails });
-            }
-        } else if (role === 'FOOD') {
-            if (dailyState.food) {
-                return res.json({ success: true, status: "DENIED", message: "Food already claimed today", ticket: scopedDetails, data: scopedDetails });
-            }
-        } else if (role === 'PARKING') {
-            if (dailyState.parking) {
-                return res.json({ success: true, status: "DENIED", message: "Parking already used today", ticket: scopedDetails, data: scopedDetails });
-            }
-        } else if (role === 'CUSTOM_ADDON') {
-            const allowedAddons = req.user.customAddonItemNames || [];
-            const addonName = allowedAddons[0];
-            
-            if (addonName) {
-                const hasAddon = ticket.ticketType?.toLowerCase() === addonName.toLowerCase() ||
-                                 (booking && booking.selectedAddons && booking.selectedAddons.some(a => a.itemName?.toLowerCase() === addonName.toLowerCase())) ||
-                                 (booking && booking.selectedFood && booking.selectedFood.some(f => f.itemName?.toLowerCase() === addonName.toLowerCase()));
 
-                if (!hasAddon) {
-                    return res.json({ success: true, status: "DENIED", message: "Access Denied - Package Not Eligible", ticket: scopedDetails, data: scopedDetails });
-                }
-                
-                if (dailyState.addons && dailyState.addons[addonName]) {
-                    return res.json({ success: true, status: "DENIED", message: `${addonName} already used today`, ticket: scopedDetails, data: scopedDetails });
-                }
-            }
-        }
-
-        // We no longer atomically mark as used here. 
-        // The frontend will call /update-entry, /update-food, etc., based on user action.
-
-        // Log Scan Success (Just the verification attempt)
-        try {
-            await ScanLog.create({ 
-                ticketId: ticket._id, 
-                staffId: req.user.id, 
-                eventId: ticket.eventId || (event ? event._id || event : null), 
-                status: 'verification_success' 
-            });
-        } catch (logErr) {
-            console.error("Scan Log Creation Failed:", logErr.message);
-        }
-
-        let successMessage = "Clear for Scan";
-        if (role === 'ENTRY') successMessage = "Entry Access Granted";
-        else if (role === 'FOOD') successMessage = "Food Access Granted";
-        else if (role === 'CUSTOM_ADDON' && req.user.customAddonItemNames?.length > 0) {
-            successMessage = `${req.user.customAddonItemNames[0]} Access Granted`;
-        }
-
-        return res.json({
-            success: true,
-            status: "GRANTED",
-            message: successMessage,
-            ticket: scopedDetails,
-            data: scopedDetails
-        });
 
     } catch (err) {
         console.error("Scan Verification Error:", err);
-        res.status(500).json({ success: false, message: "Server Error" });
+        res.status(500).json({ success: false, message: "Server Error: " + err.stack });
     }
 };
 
@@ -1115,3 +1088,50 @@ exports.updateAddonsAccess = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error during addon status update' });
     }
 };
+
+exports.getMyScans = async (req, res) => {
+    try {
+        const staffId = req.user.id || req.user._id;
+        const accessCode = req.user.assignedAccessCode || 'ENTRY';
+
+        let accessName = 'Entry';
+        if (accessCode !== 'ENTRY') {
+            const User = require('../models/User');
+            const organizer = await User.findById(req.user.createdBy).lean();
+            if (organizer && organizer.operationalAddons) {
+                const addon = organizer.operationalAddons.find(a => a.addonCode === accessCode);
+                if (addon) accessName = addon.name;
+                else accessName = accessCode;
+            } else {
+                accessName = accessCode;
+            }
+        }
+
+        const ScanLog = require('../models/ScanLog');
+        const logs = await ScanLog.find({ staffId })
+            .populate('ticketId', 'name amountPaid totalAmount ticketType')
+            .populate('eventId', 'title')
+            .sort({ scannedAt: -1 })
+            .limit(100)
+            .lean();
+
+        let myScans = logs.map(log => ({
+            name: log.ticketId?.name || "Attendee",
+            event: log.eventId?.title || "Event",
+            status: "GRANTED",
+            reason: "Valid Ticket",
+            time: new Date(log.scannedAt).toLocaleTimeString(),
+            paid: log.ticketId?.amountPaid || 0,
+            total: log.ticketId?.totalAmount || 0,
+            selectedPlan: log.ticketId?.ticketType || "Standard",
+            scanTimestamp: new Date(log.scannedAt).getTime()
+        }));
+
+        res.status(200).json({ success: true, accessName, data: myScans });
+    } catch (err) {
+        console.error("getMyScans Error:", err);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+

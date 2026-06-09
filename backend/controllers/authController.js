@@ -24,6 +24,7 @@ const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
         status: user.status,
         phone: user.phone,
         avatar: user.avatar,
+        assignedAccessCode: user.assignedAccessCode,
         // Attendee specific fields
         interests: user.interests,
         address: user.address,

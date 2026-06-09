@@ -13,8 +13,8 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const KarmaLandingPage = lazy(() => import('./pages/KarmaLandingPage'));
-const KarmaBookingPage = lazy(() => import('./pages/KarmaBookingPage'));
+const IriLandingPage = lazy(() => import('./pages/IriLandingPage'));
+const IriBookingPage = lazy(() => import('./pages/IriBookingPage'));
 const AdminEnquiries = lazy(() => import('./pages/AdminEnquiries'));
 const AdminEnquiryDetails = lazy(() => import('./pages/AdminEnquiryDetails'));
 const TicketView = lazy(() => import('./pages/TicketView'));
@@ -85,8 +85,8 @@ const AppContent = () => {
             <main style={{ flex: 1 }}>
                 <Suspense fallback={<SectorLoader />}>
                     <Routes>
-                        <Route path="/" element={<KarmaLandingPage />} />
-                        <Route path="/karma-booking" element={<KarmaBookingPage />} />
+                        <Route path="/" element={<IriLandingPage />} />
+                        <Route path="/iri-booking" element={<IriBookingPage />} />
                         <Route path="/payment" element={<PaymentPage />} />
 
                         <Route path="/tickets/:id" element={<TicketView />} />
@@ -130,8 +130,8 @@ const AppContent = () => {
                         <Route path="/staff/scanner" element={<ProtectedRoute roles={['staff', 'admin']}><DashboardWrapper role="staff"><StaffScanner /></DashboardWrapper></ProtectedRoute>} />
                         <Route path="/remaining-payment/:bookingId" element={<ProtectedRoute><RemainingPaymentPage /></ProtectedRoute>} />
 
-                        {/* Catch-all → Karma Landing */}
-                        <Route path="*" element={<KarmaLandingPage />} />
+                        {/* Catch-all → IRI Landing */}
+                        <Route path="*" element={<IriLandingPage />} />
                     </Routes>
                 </Suspense>
             </main>
