@@ -62,7 +62,7 @@ exports.sendBookingConfirmation = async (user, event, pdfBuffer, bookingDetails)
                     
 
                     <p style="font-size: 14px; font-weight: bold; color: #b91c1c; text-align: center; margin-top: 20px;">
-                        This ticket is valid from 17 August to 21 August.
+                        This ticket is valid for entry on ${new Date(event.date).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}.
                     </p>
                     <p style="font-size: 13px; color: #9ca3af; text-align: center; line-height: 1.5;">
                         Please ensure you have the attached QR code ready at the entrance for a seamless entry process.

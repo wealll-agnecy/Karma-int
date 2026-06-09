@@ -90,7 +90,19 @@ const processPartialPaymentAction = async (data) => {
         }
 
         console.log(`[TICKET QUEUE]: Generating QR Pass for partial payment: ${ticket.name}`);
-        const qrDataUrl = await qrcode.toDataURL(ticket.uuid, { width: 300, margin: 1 });
+        
+        // Use full verification URL for QR
+        const publicUrl = process.env.PUBLIC_URL || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : 'https://growthutsav.com');
+        let activeAddons = [];
+        if (ticket.booking && ticket.booking.selectedAddons) {
+            // Simplified addons processing for partial
+            activeAddons = ticket.booking.selectedAddons.map(a => a.itemName.toLowerCase());
+        }
+        const secureToken = ticket.uuid + (activeAddons.length > 0 ? '?addons=' + activeAddons.join(',') : '');
+        const verificationUrl = `${publicUrl}/ticket/${secureToken}`;
+        
+        // Use QuickChart external URL to prevent Gmail from stripping base64 inline images
+        const qrDataUrl = `https://quickchart.io/qr?text=${encodeURIComponent(verificationUrl)}&size=300&margin=1`;
         
         try {
             await sendPartialPaymentConfirmation(

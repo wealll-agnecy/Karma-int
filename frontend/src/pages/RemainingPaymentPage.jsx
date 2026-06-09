@@ -74,7 +74,7 @@ const RemainingPaymentPage = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID || "dummy_key",
                 amount: orderRes.data.amount,
                 currency: orderRes.data.currency,
-                name: "IRI APEX",
+                name: "MAKEUP CONCLAVE 1.0",
                 description: "Installment Payment",
                 order_id: orderRes.data.orderId,
                 handler: async function (response) {

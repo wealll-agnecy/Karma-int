@@ -1107,8 +1107,21 @@ exports.getMyScans = async (req, res) => {
             }
         }
 
+        const EventModel = require('../models/Event');
+        let authorizedEventIds = [];
+        
+        if (req.user.role === 'admin') {
+            const events = await EventModel.find({}, '_id').lean();
+            authorizedEventIds = events.map(e => e._id);
+        } else {
+            const orgEvents = await EventModel.find({ organizer: req.user.createdBy }, '_id').lean();
+            const orgEventIds = orgEvents.map(e => e._id.toString());
+            const assignedIds = (req.user.assignedEvents || []).map(e => e.toString());
+            authorizedEventIds = [...new Set([...orgEventIds, ...assignedIds])];
+        }
+
         const ScanLog = require('../models/ScanLog');
-        const logs = await ScanLog.find({ staffId })
+        const logs = await ScanLog.find({ eventId: { $in: authorizedEventIds } })
             .populate('ticketId', 'name amountPaid totalAmount ticketType')
             .populate('eventId', 'title')
             .sort({ scannedAt: -1 })

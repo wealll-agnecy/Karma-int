@@ -62,25 +62,25 @@ exports.generateTicketPDF = async (ticketId) => {
             // 2. Premium Top Strip
             doc.rect(0, 0, 595.28, 12).fill(primaryColor);
 
-            // 3. Event Header Section (STATIC CONTENT)
+            // 3. Event Header Section (DYNAMIC CONTENT)
             doc.fillColor(primaryColor)
                .font('Helvetica-Bold')
                .fontSize(24)
-               .text('IRI APEX BASIC TO ADVANCED MASTER CLASS', 50, 60, { width: 495, align: 'left', lineGap: 6 });
+               .text(ticket.event.title.toUpperCase(), 50, 60, { width: 495, align: 'left', lineGap: 6 });
             
             // Event Logistics
             doc.fillColor(primaryColor).fontSize(13).font('Helvetica-Bold').text('EVENT LOGISTICS', 50, 150);
             
             // Venue
             doc.fillColor(lightText).font('Helvetica').fontSize(10).text('VENUE', 50, 180);
-            doc.fillColor(textColor).font('Helvetica-Bold').fontSize(12).text('ALTAIR BOUTIQUE HOTEL, SALT LAKE', 50, 195, { width: 400 });
+            doc.fillColor(textColor).font('Helvetica-Bold').fontSize(12).text(ticket.event.venue.toUpperCase(), 50, 195, { width: 400 });
             
             // Date & Time
             doc.fillColor(lightText).font('Helvetica').fontSize(10).text('DATE RANGE', 50, 235);
-            doc.fillColor(textColor).font('Helvetica-Bold').fontSize(12).text('17 Aug – 21 Aug (Total Duration: 5 Days)', 50, 250);
+            doc.fillColor(textColor).font('Helvetica-Bold').fontSize(12).text(getFormattedDateRange(ticket.event.date, ticket.event.endDate), 50, 250);
 
             doc.fillColor(lightText).font('Helvetica').fontSize(10).text('TIME', 350, 235);
-            doc.fillColor(textColor).font('Helvetica-Bold').fontSize(12).text('10:00 AM', 350, 250);
+            doc.fillColor(textColor).font('Helvetica-Bold').fontSize(12).text(ticket.event.time || '10:00 AM', 350, 250);
 
             // 5. Muted Divider
             doc.moveTo(50, 290).lineTo(545, 290).lineWidth(1).stroke(dividerColor);
@@ -122,9 +122,9 @@ exports.generateTicketPDF = async (ticketId) => {
             const entryQty = (ticket.quantity) ? ticket.quantity : ((ticket.booking && ticket.booking.quantity) ? ticket.booking.quantity : 1);
             const dayCount = (ticket.selectedDays && ticket.selectedDays.length > 0) ? ticket.selectedDays.length : 1;
             
-            const validityTitle = `VALID FOR 5 DAYS`;
+            const validityTitle = dayCount > 1 ? `VALID FOR ${dayCount} DAYS` : `VALID ENTRY TICKET`;
             const entryLabel = `Valid for ${entryQty} Person${entryQty > 1 ? 's' : ''} Entry`;
-            const staticValidityText = "This ticket is valid for 5 days only, from 17 August to 21 August.";
+            const staticValidityText = `This ticket is valid for entry on ${getFormattedDateRange(ticket.event.date, ticket.event.endDate)}.`;
             
             doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(11).text(validityTitle, 50, 565);
             doc.fillColor(lightText).font('Helvetica').fontSize(10).text(entryLabel, 50, 580);

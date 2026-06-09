@@ -64,9 +64,11 @@ export default function IriBookingPage() {
                     // console.warn('Backend responded but did not return a valid events list array. Using fallback schema.');
                     setEventDetails({
                         _id: VALID_FALLBACK_ID,
-                        title: "IRI APEX Basic to Advanced Master Class 2026",
-                        venue: "ALTAIR BOUTIQUE HOTEL, SALT LAKE",
-                        date: "2026-08-17T00:00:00.000Z",
+                        title: "MAKEUP CONCLAVE 1.0",
+                        venue: "Siliguri Montana Vista",
+                        date: "2026-07-11T09:00:00.000Z",
+                        time: "9:00 AM to 7:00 PM",
+                        duration: "1 Day",
                         ticketTypes: [{ name: "Delegate Pass" }],
                         isFallback: true
                     });
@@ -74,12 +76,14 @@ export default function IriBookingPage() {
             } catch (err) {
                 console.error('Failed to fetch event directly from backend endpoint:', err);
                 setEventDetails({
-                    _id: VALID_FALLBACK_ID,
-                    title: "IRI APEX Basic to Advanced Master Class 2026",
-                    venue: "ALTAIR BOUTIQUE HOTEL, SALT LAKE",
-                    date: "2026-08-17T00:00:00.000Z",
-                    ticketTypes: [{ name: "Delegate Pass" }],
-                    isFallback: true
+                        _id: VALID_FALLBACK_ID,
+                        title: "MAKEUP CONCLAVE 1.0",
+                        venue: "Siliguri Montana Vista",
+                        date: "2026-07-11T09:00:00.000Z",
+                        time: "9:00 AM to 7:00 PM",
+                        duration: "1 Day",
+                        ticketTypes: [{ name: "Delegate Pass" }],
+                        isFallback: true
                 });
             } finally {
                 setIsLoadingEvent(false);
@@ -189,8 +193,8 @@ export default function IriBookingPage() {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID || "dummy_key",
                 amount: orderRes.data.amount,
                 currency: orderRes.data.currency,
-                name: "IRI APEX",
-                description: "Event Booking",
+                name: "MAKEUP CONCLAVE 1.0",
+                description: "Ticket Booking",
                 order_id: orderRes.data.orderId,
                 handler: async function (response) {
                     try {
